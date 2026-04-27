@@ -1,0 +1,268 @@
+/* ---------------------------------------------------------------------------
+   Cat Gatekeeper — Overlay Styles (immersive canvas mode)
+   --------------------------------------------------------------------------- */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  user-select: none;
+  cursor: default;
+}
+
+/* ---- Two-video lifecycle (active → sleeping) ---- */
+
+/* Active cat — slides in from right */
+#catVideoActive {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 1;
+  animation: slide-in 3s ease-out forwards;
+}
+
+/* Sleeping cat — hidden initially, shown after active ends */
+#catVideoSleep {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 1;
+  display: none;
+}
+
+#catVideoSleep.sleeping {
+  display: block;
+  animation: none;
+}
+
+/* ---- Chroma key canvas ---- */
+#chromaCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 1;
+  display: none;
+  pointer-events: none;
+}
+
+#chromaCanvas.active {
+  display: block;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100vw);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ---- Big countdown overlay (reference-style) ---- */
+#catCountdown {
+  position: fixed;
+  top: 20vh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 160px;
+  font-weight: bold;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  background: rgba(44, 24, 16, 0.65);
+  border-radius: 20px;
+  padding: 40px 60px;
+  line-height: 1;
+  z-index: 5;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+/* ---- Subtle UI overlay ---- */
+.ui-overlay {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  /* Lay over the canvas, bottom area only */
+  inset: auto 0 0 0;
+  padding: 20px 30px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  /* Fade gradient so UI emerges from bottom */
+  background: linear-gradient(transparent 0%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+.ui-overlay>* {
+  pointer-events: auto;
+}
+
+/* ---- Timer ---- */
+.timer-display {
+  font-size: 36px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 3px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 163, 115, 0.4);
+  min-width: 100px;
+  background: linear-gradient(135deg, rgba(44, 24, 16, 0.8), rgba(74, 44, 32, 0.7));
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: 2px solid rgba(212, 163, 115, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* ---- Reminder text ---- */
+.reminder-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  flex: 1;
+  min-width: 180px;
+}
+
+/* ---- Buttons ---- */
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:focus-visible {
+  outline: 3px solid rgba(255, 200, 100, 0.9);
+  outline-offset: 3px;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #d4a373 0%, #b8860b 100%);
+  color: #1a1a1e;
+  border: 2px solid rgba(212, 163, 115, 0.5);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e6c3a0 0%, #d4a373 100%);
+  box-shadow: 0 6px 20px rgba(212, 163, 115, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+  background: rgba(212, 163, 115, 0.2);
+  color: rgba(255, 255, 255, 0.2);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, rgba(212, 163, 115, 0.9) 0%, rgba(184, 134, 11, 0.85) 100%);
+  color: #1a1a1e;
+  border: 2px solid rgba(212, 163, 115, 0.6);
+  backdrop-filter: blur(10px);
+  font-weight: 800;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, rgba(230, 195, 160, 0.95) 0%, rgba(212, 163, 115, 0.9) 100%);
+  border-color: rgba(230, 195, 160, 0.8);
+  box-shadow: 0 6px 20px rgba(212, 163, 115, 0.5);
+  transform: translateY(-2px);
+  color: #1a1a1e;
+}
+
+/* ---- Fade-in ---- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.ui-overlay {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .ui-overlay {
+    padding: 12px 16px 20px;
+    gap: 10px;
+  }
+
+  .timer-display {
+    font-size: 28px;
+    min-width: 80px;
+    padding: 10px 18px;
+  }
+
+  .reminder-text {
+    font-size: 13px;
+    min-width: 120px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}

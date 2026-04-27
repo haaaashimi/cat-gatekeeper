@@ -1,0 +1,57 @@
+{
+  "name": "cat-gatekeeper",
+  "version": "1.0.0",
+  "description": "A cat gatekeeper that reminds you to take breaks from the screen",
+  "main": "main.js",
+  "author": {
+    "name": "Mohammed Haashim",
+    "url": "https://www.linkedin.com/in/mohammed-haashim-901a51221/"
+  },
+  "scripts": {
+    "setup": "node scripts/generate-assets.js && node scripts/generate-video.js",
+    "start": "electron .",
+    "start:dev": "WORK_INTERVAL=1 BREAK_DURATION=15 electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win --mac --linux",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.catgatekeeper.app",
+    "productName": "Cat Gatekeeper",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "!src/assets/cat.mp4"
+    ],
+    "extraResources": [
+      {
+        "from": "src/assets",
+        "to": "assets"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/icon1.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "src/assets/icon1.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^41.3.0",
+    "electron-builder": "^26.9.0"
+  }
+}

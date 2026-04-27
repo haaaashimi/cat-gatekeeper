@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline' 'unsafe-eval' file:; media-src 'self' file:;">
+  <title>Cat Gatekeeper</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+
+<body>
+  <!-- Primary cat video (active - walks in with slide-in) -->
+  <video id="catVideoActive" muted playsinline autoplay preload="auto"></video>
+
+  <!-- Secondary cat video (sleeping - loops after active ends) -->
+  <video id="catVideoSleep" muted playsinline loop preload="auto"></video>
+
+  <!-- Chroma key canvas (renders processed video frames when enabled) -->
+  <canvas id="chromaCanvas"></canvas>
+
+  <!-- Large countdown overlay (reference-style)
+  <div id="catCountdown">0:00</div> -->
+
+  <!-- Subtle UI overlay -->
+  <div class="ui-overlay">
+    <div class="timer-display" id="timerDisplay">0:20</div>
+    <div class="reminder-text" id="reminderText">Time to move away from the screen</div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="snoozeBtn">Snooze 5 min</button>
+      <button class="btn btn-primary" id="dismissBtn" disabled>Done</button>
+    </div>
+  </div>
+
+  <script src="overlay.js"></script>
+</body>
+
+</html>

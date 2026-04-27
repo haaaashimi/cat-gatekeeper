@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline';">
+  <title>Cat Gatekeeper — Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+
+<body>
+  <div class="settings-container">
+    <div class="header">
+      <h1>Cat Gatekeeper</h1>
+      <p class="subtitle">Your feline break reminder</p>
+    </div>
+
+    <!-- Timer Status -->
+    <div class="status-card" id="statusCard">
+      <div class="status-label">Timer Status</div>
+      <div class="status-value" id="statusValue">Next break in 20:00</div>
+      <div class="status-actions">
+        <button class="btn btn-sm" id="pauseBtn">Pause</button>
+      </div>
+    </div>
+
+    <!-- Work Interval -->
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Work Interval</span>
+        <span class="label-desc">Minutes between break reminders</span>
+      </div>
+      <div class="setting-control">
+        <input type="range" id="workInterval" min="5" max="120" value="50" step="1">
+        <span class="range-value" id="workIntervalValue">50 min</span>
+      </div>
+    </div>
+
+    <!-- Break Duration -->
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Break Duration</span>
+        <span class="label-desc">Minutes for your break (HSE: 5-10 min per hour)</span>
+      </div>
+      <div class="setting-control">
+        <input type="range" id="breakDuration" min="60" max="600" value="300" step="30">
+        <span class="range-value" id="breakDurationValue">5 min</span>
+      </div>
+    </div>
+
+    <!-- HSE Health Info -->
+    <div class="health-info">
+      <div class="health-info-title">Health Guidelines</div>
+      <p class="health-info-text">
+        The UK Health and Safety Executive (HSE) recommends taking short, frequent breaks
+        rather than longer ones less often. The guideline suggests 5-10 minutes of break
+        time every hour of display screen equipment (DSE) work. This approach helps reduce
+        fatigue, eye strain, and musculoskeletal issues associated with prolonged screen time.
+        These defaults follow this evidence-based guideline.
+      </p>
+    </div>
+
+    <!-- Sound -->
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Sound Effect</span>
+        <span class="label-desc">Play a meow when break starts</span>
+      </div>
+      <div class="setting-control">
+        <label class="toggle">
+          <input type="checkbox" id="soundEnabled" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Multi-monitor -->
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Multi-Monitor</span>
+        <span class="label-desc">Show cat on all displays</span>
+      </div>
+      <div class="setting-control">
+        <label class="toggle">
+          <input type="checkbox" id="multiMonitor" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Custom Video -->
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Custom Cat Video <span class="badge-wip">WIP</span></span>
+        <span class="label-desc">Choose your own MP4 file</span>
+      </div>
+      <div class="setting-control">
+        <button class="btn btn-outline" id="selectVideoBtn">Browse...</button>
+        <span class="file-name" id="videoFileName">Default</span>
+      </div>
+    </div>
+
+    <!-- Chroma Key -->
+    <div class="setting-group-header">Chroma Key (Green Screen) <span class="badge-wip">WIP</span></div>
+    <p class="setting-group-desc">Remove the background from your cat video so the cat appears to walk on your screen.
+      Works best with green screen videos.</p>
+
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Chroma Key</span>
+        <span class="label-desc">Remove video background</span>
+      </div>
+      <div class="setting-control">
+        <label class="toggle">
+          <input type="checkbox" id="chromaKeyEnabled" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-row" id="chromaKeyColorRow">
+      <div class="setting-label">
+        <span class="label-text">Key Color</span>
+        <span class="label-desc">Background color to remove</span>
+      </div>
+      <div class="setting-control">
+        <div class="color-picker-wrapper">
+          <input type="color" id="chromaKeyColor" value="#00ff00">
+          <span class="color-value" id="chromaKeyColorValue">#00FF00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save -->
+    <div class="footer">
+      <button class="btn btn-primary" id="saveBtn">Save Settings</button>
+      <span class="save-feedback" id="saveFeedback"></span>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+
+</html>
