@@ -21,7 +21,8 @@
     "appId": "com.catgatekeeper.app",
     "productName": "Cat Gatekeeper",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "main.js",
@@ -35,14 +36,14 @@
         "to": "assets"
       }
     ],
+    "icon": "build/icon.png",
     "win": {
       "target": "nsis",
-      "icon": "src/assets/icon1.png",
-      "signAndEditExecutable": false
+      "icon": "build/icon.png"
     },
     "mac": {
       "target": "dmg",
-      "icon": "src/assets/icon1.png"
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,

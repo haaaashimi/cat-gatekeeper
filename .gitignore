@@ -4,3 +4,6 @@ out/
 *.log
 .DS_Store
 reference/
+.agents/
+skills-lock.json
+skills
