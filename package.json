@@ -10,11 +10,11 @@
   "scripts": {
     "setup": "node scripts/generate-assets.js && node scripts/generate-video.js",
     "start": "electron .",
-    "start:dev": "WORK_INTERVAL=1 BREAK_DURATION=15 electron .",
+    "start:dev": "cross-env WORK_INTERVAL=1 BREAK_DURATION=15 electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win --mac --linux",
     "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win",
+    "dist:win": "electron-builder --win --dir",
     "dist:linux": "electron-builder --linux"
   },
   "build": {
@@ -37,7 +37,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "src/assets/icon1.png"
+      "icon": "src/assets/icon1.png",
+      "signAndEditExecutable": false
     },
     "mac": {
       "target": "dmg",
@@ -49,8 +50,8 @@
       "runAfterFinish": true
     }
   },
-  "dependencies": {},
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "electron": "^41.3.0",
     "electron-builder": "^26.9.0"
   }
