@@ -3,18 +3,36 @@
   "version": "1.0.0",
   "description": "A cat gatekeeper that reminds you to take breaks from the screen",
   "main": "main.js",
+  "license": "MIT",
   "author": {
     "name": "Mohammed Haashim",
     "url": "https://www.linkedin.com/in/mohammed-haashim-901a51221/"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haaaashimi/cat-gatekeeper.git"
+  },
+  "homepage": "https://github.com/haaaashimi/cat-gatekeeper#readme",
+  "bugs": {
+    "url": "https://github.com/haaaashimi/cat-gatekeeper/issues"
+  },
+  "keywords": [
+    "electron",
+    "break-reminder",
+    "productivity",
+    "health",
+    "cat",
+    "desktop-app",
+    "screen-breaks",
+    "hse-guidelines"
+  ],
   "scripts": {
-    "setup": "node scripts/generate-assets.js && node scripts/generate-video.js",
     "start": "electron .",
     "start:dev": "cross-env WORK_INTERVAL=1 BREAK_DURATION=15 electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win --mac --linux",
     "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win --dir",
+    "dist:win": "electron-builder --win",
     "dist:linux": "electron-builder --linux"
   },
   "build": {

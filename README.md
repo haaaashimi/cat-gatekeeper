@@ -1,32 +1,27 @@
 # Cat Gatekeeper
 
-A playful Windows desktop app that periodically blocks your screen with a cat video to remind you to take breaks. Built with Electron.
+> A playful desktop app that periodically blocks your screen with a cat video to remind you to take breaks. Built with Electron. This is inspired project. See [Acknowledgments](#acknowledgments)
 
 When your work interval is up, a cat slides in from the side of your screen and after a moment falls asleep on your display — a friendly feline gatekeeper enforcing HSE-recommended screen breaks.
 
-## Features
+**This project is open for contributions!** Whether you want to fix bugs, add features, improve documentation, or share your favorite cat videos — all contributions are welcome. See [Contributing](#contributing) below.
 
-- **Full-screen cat overlay** — blocks your screen with a cat video at break time
-- **Two-video lifecycle** — an active cat slides in from the right, then transitions to a looping sleeping cat
-- **Slide-in animation** — the cat smoothly enters from off-screen over 3 seconds
-- **Large countdown display** — prominent timer showing remaining break time
-- **Configurable intervals** — work period (5-120 min) and break duration (1-10 min)
-- **HSE-recommended defaults** — 50 min work, 5 min break per hour (5-10 min break hourly)
-- **System tray** — runs quietly in the background, pause/resume from tray menu
-- **Custom cat video** — use your own MP4 via the settings panel *(Work in Progress)*
-- **Chroma key support** — remove green screen backgrounds *(Work in Progress)*
-- **Multi-monitor support** — shows the cat on all displays
-- **Sound alert** — optional meow on break start
-- **Snooze** — add 5 more minutes if you're in the zone
+## ✨ Features
 
-## Quick Start
+- **Cat overlay** — playful full-screen break reminder with animated cat
+- **Two-video lifecycle** — active cat slides in, then transitions to sleeping cat
+- **HSE-compliant defaults** — 50 min work / 5 min break intervals
+- **Customizable** — adjust work/break intervals to your preference
+- **System tray** — runs quietly in background with pause/resume controls
+- **Multi-monitor** — works across all your displays
+- **Custom videos** — use your own cat videos (WIP)
+- **Snooze** — add 5 minutes when you're in the zone
+
+## 🚀 Quick Start
 
 ```bash
 # Install dependencies
 npm install
-
-# Generate placeholder assets (icons, cat image, fallback video)
-npm run setup
 
 # Launch the app
 npm start
@@ -34,22 +29,21 @@ npm start
 
 The app starts in your system tray. The cat will appear after 50 minutes (default) for a 5-minute break.
 
-> The app ships with real cat videos (`neko1.webm`, `neko2.webm`) in `src/assets/`. The `npm run setup` script only generates placeholder fallback assets — the real cat videos are included directly.
+> The app ships with real cat videos (`neko1.webm`, `neko2.webm`) and all required assets in `src/assets/`. No additional setup needed.
 
-## Commands
+## 🛠️ Commands
 
 | Command | Description |
 |---------|-------------|
 | `npm start` | Launch the app (50 min interval) |
 | `npm run start:dev` | Launch with 1 min interval for testing |
-| `npm run setup` | Generate placeholder icons, cat image, and fallback video |
 | `npm run pack` | Package app into a directory (no installer) |
 | `npm run dist` | Build installers for all platforms |
 | `npm run dist:win` | Build Windows installer (.exe) |
 | `npm run dist:mac` | Build macOS disk image (.dmg) |
 | `npm run dist:linux` | Build Linux package (.AppImage) |
 
-## How It Works
+## 🎮 How It Works
 
 1. The app sits in your system tray with a background timer
 2. When the work interval ends, a full-screen overlay opens
@@ -59,7 +53,7 @@ The app starts in your system tray. The cat will appear after 50 minutes (defaul
 6. After the break, the overlay closes and the timer resets
 7. You can snooze (+5 min) or dismiss the break early
 
-## Custom Cat Video *(Work in Progress)*
+## 🎨 Custom Cat Video 🚧
 
 ### Via Settings UI
 1. Right-click the tray icon and open **Settings**
@@ -86,17 +80,17 @@ ffmpeg -i your_greenscreen.mp4 -vf "colorkey=0x00FF00:0.3:0.1,format=yuv420p" \
   -c:v libx264 -pix_fmt yuv420p src/assets/cat_processed.mp4
 ```
 
-## Tech Stack
+## 💻 Tech Stack
 
 - **Electron** — cross-platform desktop shell
 - **HTML/CSS/JS** — overlay and settings UI
 - **electron-builder** — packaging and distribution
 - **ffmpeg** — placeholder video generation (dev dependency)
 
-## Project Structure
+## 📁 Project Structure
 
 ```
-cat-reminder/
+cat-gatekeeper/
 ├── main.js                  # Main process: windows, tray, timer, IPC
 ├── preload.js               # Secure context bridge
 ├── package.json
@@ -113,24 +107,25 @@ cat-reminder/
 │       ├── neko2.webm       # Sleeping cat video (loops after active ends)
 │       ├── cat.mp4          # Fallback/legacy video
 │       ├── cat.png          # Fallback cat image
-│       ├── icon.png         # App and tray icon
+│       ├── icon1.png         # App and tray icon
 │       └── icon-small.png   # Small tray icon
 └── scripts/
     ├── generate-assets.js   # Generates PNG icons and cat image
     └── generate-video.js    # Creates placeholder cat video via ffmpeg
 ```
 
-## Default Settings
+## ⚙️ Default Settings
 
 | Setting | Default | Range |
 |---------|---------|-------|
 | Work interval | 50 min | 5-120 min |
 | Break duration | 5 min (300 sec) | 1-10 min (60-600 sec) |
-| Sound effect | enabled | on/off |
+| Snooze duration | 5 min (300 sec) | configurable |
+| Sound effect | disabled | on/off |
 | Multi-monitor | enabled | on/off |
 | Cat video | bundled neko1.webm (active) + neko2.webm (sleeping) | user-selectable |
 
-## Building for Distribution
+## 📦 Building for Distribution
 
 ### Windows
 ```bash
@@ -150,7 +145,7 @@ npm run dist:linux
 ```
 Produces an AppImage in `dist/`.
 
-## Dev Mode
+## 🧪 Dev Mode
 
 For quick testing with short intervals:
 
@@ -161,5 +156,55 @@ npm run start:dev
 This sets the work interval to 1 minute and break duration to 15 seconds. You can also use environment variables directly:
 
 ```bash
-WORK_INTERVAL=2 BREAK_DURATION=10 npm start
+WORK_INTERVAL=1 BREAK_DURATION=15 npm start
 ```
+
+## 🤝 Contributing
+
+We welcome all contributions! Whether you're fixing a bug, adding a feature, improving documentation, or sharing cat videos — every contribution matters.
+
+### Ways to Contribute
+
+- 🐛 **Report bugs** — Found something broken? [Open an issue](https://github.com/haaaashimi/cat-gatekeeper/issues)
+- 💡 **Suggest features** — Have an idea? We'd love to hear it
+- 📝 **Improve docs** — Better documentation helps everyone
+- 🎨 **Design** — UI/UX improvements, icons, animations
+- 🐱 **Cat videos** — Share your favorite cat videos for the overlay
+- 💻 **Code** — Fix bugs, build features, optimize performance
+
+### Getting Started
+
+1. **Fork** this repository
+2. **Create your feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make your changes**
+4. **Test thoroughly** — use `npm run start:dev` for quick testing
+5. **Commit your changes**: `git commit -m 'Add amazing feature'`
+6. **Push to the branch**: `git push origin feature/amazing-feature`
+7. **Open a Pull Request**
+
+### Development Guidelines
+
+- Follow the existing code style
+- Comment your code, especially for complex logic
+- Test on multiple platforms if possible (Windows, macOS, Linux)
+- Update documentation when adding features
+- Keep pull requests focused — one feature/fix per PR
+
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **[ぞくぞく](https://x.com/konekone2026)** — The original creator of the [Cat Gatekeeper Chrome extension](https://chromewebstore.google.com/detail/cat-gatekeeper/elbikiflgfhjdjmficnigpeegjbhdidh), built to limit SNS usage. This Electron desktop app is inspired by their brilliant idea, adapted to follow HSE screen-break guidelines for desk workers.
+- HSE (Health and Safety Executive) for screen break recommendations
+- All the cats who inspired this project 🐱
+
+## 📬 Contact & Support
+
+- 🐛 **Bug reports**: [GitHub Issues](https://github.com/haaaashimi/cat-gatekeeper/issues)
+- 💬 **Questions**: [Discussions](https://github.com/haaaashimi/cat-gatekeeper/discussions)
+
+---
+
+**Made with ❤️ for cats and healthy screen habits**
