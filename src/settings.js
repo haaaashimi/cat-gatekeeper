@@ -9,6 +9,8 @@
   const workIntervalValue = document.getElementById('workIntervalValue');
   const breakDurationInput = document.getElementById('breakDuration');
   const breakDurationValue = document.getElementById('breakDurationValue');
+  const snoozeDurationInput = document.getElementById('snoozeDuration');
+  const snoozeDurationValue = document.getElementById('snoozeDurationValue');
   const soundEnabledInput = document.getElementById('soundEnabled');
   const multiMonitorInput = document.getElementById('multiMonitor');
   const selectVideoBtn = document.getElementById('selectVideoBtn');
@@ -43,6 +45,9 @@
       breakDurationInput.value = settings.breakDuration;
       breakDurationValue.textContent = `${Math.round(settings.breakDuration / 60)} min`;
 
+      snoozeDurationInput.value = settings.snoozeDuration || 300;
+      snoozeDurationValue.textContent = `${Math.round((settings.snoozeDuration || 300) / 60)} min`;
+
       soundEnabledInput.checked = settings.soundEnabled;
       multiMonitorInput.checked = settings.multiMonitor;
 
@@ -68,6 +73,7 @@
   function checkForChanges() {
     const currentWorkInterval = parseInt(workIntervalInput.value, 10);
     const currentBreakDuration = parseInt(breakDurationInput.value, 10);
+    const currentSnoozeDuration = parseInt(snoozeDurationInput.value, 10);
     const currentSoundEnabled = soundEnabledInput.checked;
     const currentMultiMonitor = multiMonitorInput.checked;
     const currentVideoPath = selectedVideoPath || '';
@@ -77,6 +83,7 @@
     hasChanges = (
       currentWorkInterval !== currentSettings.workInterval ||
       currentBreakDuration !== currentSettings.breakDuration ||
+      currentSnoozeDuration !== (currentSettings.snoozeDuration || 300) ||
       currentSoundEnabled !== currentSettings.soundEnabled ||
       currentMultiMonitor !== currentSettings.multiMonitor ||
       currentVideoPath !== (currentSettings.videoPath || '') ||
@@ -96,6 +103,7 @@
     const newSettings = {
       workInterval: parseInt(workIntervalInput.value, 10),
       breakDuration: parseInt(breakDurationInput.value, 10),
+      snoozeDuration: parseInt(snoozeDurationInput.value, 10),
       soundEnabled: soundEnabledInput.checked,
       multiMonitor: multiMonitorInput.checked,
       videoPath: selectedVideoPath || '',
@@ -168,6 +176,11 @@
 
     breakDurationInput.addEventListener('input', () => {
       breakDurationValue.textContent = `${Math.round(breakDurationInput.value / 60)} min`;
+      checkForChanges();
+    });
+
+    snoozeDurationInput.addEventListener('input', () => {
+      snoozeDurationValue.textContent = `${Math.round(snoozeDurationInput.value / 60)} min`;
       checkForChanges();
     });
 

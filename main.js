@@ -17,9 +17,10 @@ const fs = require('fs');
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
 const DEFAULT_SETTINGS = {
-  version: 2,  // Increment when defaults change to trigger migration
+  version: 3,  // Increment when defaults change to trigger migration
   workInterval: 50,  // minutes (HSE: 5-10 min break per hour)
   breakDuration: 300, // seconds (5 minutes - HSE guideline)
+  snoozeDuration: 300, // seconds (5 minutes default)
   soundEnabled: false,
   multiMonitor: true,
   videoPath: '',           // empty = use bundled default
@@ -65,6 +66,12 @@ function migrateSettings(oldData, currentSettings) {
     console.log('Applying HSE guideline defaults (v1 → v2)');
     currentSettings.workInterval = DEFAULT_SETTINGS.workInterval;
     currentSettings.breakDuration = DEFAULT_SETTINGS.breakDuration;
+  }
+
+  // Migration from v2 to v3: Add snooze duration
+  if (version < 3) {
+    console.log('Adding snooze duration default (v2 → v3)');
+    currentSettings.snoozeDuration = DEFAULT_SETTINGS.snoozeDuration;
   }
 
   // Update version to latest
@@ -317,8 +324,9 @@ function endBreak() {
 }
 
 function snoozeBreak() {
+  const settings = loadSettings();
   endBreak();
-  workSecondsRemaining = Math.max(workSecondsRemaining, 5 * 60); // snooze 5 min
+  workSecondsRemaining = settings.snoozeDuration;
 }
 
 function ensureAudioWindow() {
