@@ -31,6 +31,47 @@ The app starts in your system tray. The cat will appear after 50 minutes (defaul
 
 > The app ships with real cat videos (`neko1.webm`, `neko2.webm`) and all required assets in `src/assets/`. No additional setup needed.
 
+## 📥 Installation
+
+### Download from Releases
+
+For most users, we recommend downloading the latest release:
+
+1. Go to the [Releases page](https://github.com/haaaashimi/cat-gatekeeper/releases)
+2. Download the installer for your platform:
+   - **Windows**: `.exe` installer
+   - **macOS**: `.dmg` disk image
+   - **Linux**: `.AppImage` file
+
+### macOS Security Gatekeeper
+
+> **⚠️ Important for macOS users:**
+> 
+> Since Cat Gatekeeper is not signed with an Apple Developer certificate, macOS Gatekeeper will block it on first launch with a message like:
+> 
+> _"Cat Gatekeeper" cannot be opened because the developer cannot be verified._
+> 
+> **This is a standard macOS security feature, not a problem with the app.** The app is open-source and safe to use.
+> 
+> **To open the app:**
+> 
+> 1. **Don't click "Move to Trash"** — click **Cancel** or the **X** button
+> 2. Open **System Settings** (or System Preferences)
+> 3. Go to **Privacy & Security** (or Security & Privacy)
+> 4. Scroll down to the Security section
+> 5. You'll see a message: _"Cat Gatekeeper was blocked..."_
+> 6. Click **Open Anyway**
+> 7. A second dialog will appear — click **Open**
+> 
+> **Alternative method (via Terminal):**
+> 
+> ```bash
+> xattr -d com.apple.quarantine /Applications/Cat\ Gatekeeper.app
+> ```
+> 
+> **Disclaimer:** Cat Gatekeeper is provided as-is under the MIT License. The app is open-source — you can review the code to verify its behavior. By using this software, you acknowledge that you do so at your own discretion. The maintainers are not responsible for any issues arising from its use.
+
+
 ## 🛠️ Commands
 
 | Command | Description |
