@@ -3,22 +3,30 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
   push:
     branches: [main]
+  workflow_dispatch:  # Allow manual triggers
 
-# Restrict permissions for security
+# Restrict permissions for security (2026 security default)
 permissions:
   contents: read
+
+# Cancel in-progress runs for the same branch (cost optimization)
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30  # Prevent runaway workflows
     
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
-      fail-fast: false
+      fail-fast: false  # Don't cancel other OS builds if one fails
     
     steps:
       - name: Checkout code
@@ -28,34 +36,25 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '20'
-          cache: 'npm'
-      
-      - name: Cache dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.npm
-            ${{ github.workspace }}/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: 'npm'  # Built-in caching (2026 best practice)
       
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
       
       - name: Dependency audit
         run: npm audit --audit-level=high
-        continue-on-error: true
+        continue-on-error: true  # Non-blocking security check
       
-      - name: Build macOS
+      - name: Build for macOS
         if: matrix.os == 'macos-latest'
         run: npm run dist:mac
       
-      - name: Build Windows
+      - name: Build for Windows
         if: matrix.os == 'windows-latest'
         run: npm run dist:win
       
       - name: Verify build output
+        shell: bash  # Ensure cross-platform compatibility
         run: |
           if [ -d "dist" ] && [ "$(ls -A dist/)" ]; then
             echo "✅ Build successful - artifacts created"
