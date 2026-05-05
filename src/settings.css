@@ -88,10 +88,27 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.status-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .status-actions .btn-sm {
   padding: 6px 16px;
   font-size: 13px;
   border-radius: 8px;
+}
+
+.btn-reset {
+  background: transparent;
+  color: #e67e22;
+  border: 1px solid rgba(230, 126, 34, 0.35);
+}
+
+.btn-reset:hover {
+  background: rgba(230, 126, 34, 0.12);
+  color: #f39c12;
+  border-color: rgba(230, 126, 34, 0.6);
 }
 
 /* ---- Setting rows ---- */

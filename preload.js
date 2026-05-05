@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('catAPI', {
   getTimerStatus: () => ipcRenderer.invoke('get-timer-status'),
   pauseTimer: () => ipcRenderer.send('pause-timer'),
   resumeTimer: () => ipcRenderer.send('resume-timer'),
+  resetTimer: () => ipcRenderer.send('reset-timer'),
 
   // Break actions
   dismissBreak: () => ipcRenderer.send('dismiss-break'),

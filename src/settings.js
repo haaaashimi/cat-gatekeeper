@@ -19,6 +19,7 @@
   const saveFeedback = document.getElementById('saveFeedback');
   const statusValue = document.getElementById('statusValue');
   const pauseBtn = document.getElementById('pauseBtn');
+  const resetTimerBtn = document.getElementById('resetTimerBtn');
   const chromaKeyEnabledInput = document.getElementById('chromaKeyEnabled');
   const chromaKeyColorInput = document.getElementById('chromaKeyColor');
   const chromaKeyColorValue = document.getElementById('chromaKeyColorValue');
@@ -204,6 +205,11 @@
       } else {
         window.catAPI.pauseTimer();
       }
+    });
+
+    // Reset Timer
+    resetTimerBtn.addEventListener('click', () => {
+      window.catAPI.resetTimer();
     });
 
     // Toggle inputs (sound, multi-monitor, chroma key)
