@@ -329,6 +329,18 @@ function snoozeBreak() {
   workSecondsRemaining = settings.snoozeDuration;
 }
 
+function resetTimer() {
+  stopTimer();
+  const settings = loadSettings();
+  workSecondsRemaining = settings.workInterval * 60;
+  isBreakActive = false;
+  isPaused = false;
+  closeOverlayWindows();
+  startTimer();
+  updateTrayMenu();
+  broadcastTimerStatus();
+}
+
 function ensureAudioWindow() {
   if (!audioWindow || audioWindow.isDestroyed()) {
     audioWindow = new BrowserWindow({
@@ -416,6 +428,12 @@ function updateTrayMenu() {
       }
     },
     {
+      label: 'Reset Timer',
+      click: () => {
+        resetTimer();
+      }
+    },
+    {
       label: 'Settings',
       click: () => createSettingsWindow()
     },
@@ -433,6 +451,7 @@ function updateTrayMenu() {
   contextMenu.on('menu-will-show', () => {
     contextMenu.items[0].label = isBreakActive ? 'Break in progress...' : getTimeDisplay();
     contextMenu.items[2].label = isPaused ? 'Resume Timer' : 'Pause Timer';
+    contextMenu.items[3].label = 'Reset Timer';
   });
 
   tray.setContextMenu(contextMenu);
@@ -505,6 +524,10 @@ function setupIPC() {
       snoozeBreak();
       updateTrayMenu();
     }
+  });
+
+  ipcMain.on('reset-timer', () => {
+    resetTimer();
   });
 
   ipcMain.handle('select-video', async () => { // TODO: WIP
