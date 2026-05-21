@@ -6,6 +6,7 @@ const {
   ipcMain,
   dialog,
   screen,
+  powerMonitor,
   nativeImage
 } = require('electron');
 const path = require('path');
@@ -17,10 +18,12 @@ const fs = require('fs');
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
 const DEFAULT_SETTINGS = {
-  version: 3,  // Increment when defaults change to trigger migration
+  version: 4,  // Increment when defaults change to trigger migration
   workInterval: 50,  // minutes (HSE: 5-10 min break per hour)
   breakDuration: 300, // seconds (5 minutes - HSE guideline)
   snoozeDuration: 300, // seconds (5 minutes default)
+  autoPauseOnIdle: true,
+  idlePauseThreshold: 300, // seconds (5 minutes)
   soundEnabled: false,
   multiMonitor: true,
   videoPath: '',           // empty = use bundled default
@@ -72,6 +75,13 @@ function migrateSettings(oldData, currentSettings) {
   if (version < 3) {
     console.log('Adding snooze duration default (v2 → v3)');
     currentSettings.snoozeDuration = DEFAULT_SETTINGS.snoozeDuration;
+  }
+
+  // Migration from v3 to v4: Add automatic idle pause
+  if (version < 4) {
+    console.log('Adding automatic idle pause defaults (v3 → v4)');
+    currentSettings.autoPauseOnIdle = DEFAULT_SETTINGS.autoPauseOnIdle;
+    currentSettings.idlePauseThreshold = DEFAULT_SETTINGS.idlePauseThreshold;
   }
 
   // Update version to latest
@@ -147,6 +157,8 @@ let breakSecondsRemaining = 0;
 let breakSecondsTotal = 0;
 let isBreakActive = false;
 let isPaused = false;
+let pauseReason = null; // null | 'manual' | 'idle'
+let idleMaxSecondsSeen = 0;
 let audioWindow = null;  // persistent hidden window for sound playback
 
 // ---------------------------------------------------------------------------
@@ -215,7 +227,7 @@ function createSettingsWindow() {
 
   settingsWindow = new BrowserWindow({
     width: 520,
-    height: 620,
+    height: 720,
     resizable: false,
     title: 'Cat Gatekeeper Settings',
     autoHideMenuBar: true,
@@ -253,9 +265,12 @@ function startTimer() {
   workSecondsRemaining = settings.workInterval * 60;
   isBreakActive = false;
   isPaused = false;
+  pauseReason = null;
+  idleMaxSecondsSeen = 0;
   broadcastTimerStatus();
 
   timerInterval = setInterval(() => {
+    updateIdlePauseState();
     if (isPaused) return;
 
     if (!isBreakActive) {
@@ -335,6 +350,8 @@ function resetTimer() {
   workSecondsRemaining = settings.workInterval * 60;
   isBreakActive = false;
   isPaused = false;
+  pauseReason = null;
+  idleMaxSecondsSeen = 0;
   closeOverlayWindows();
   startTimer();
   updateTrayMenu();
@@ -372,7 +389,8 @@ function broadcastTimerStatus() {
     breakSecondsRemaining: Math.max(0, breakSecondsRemaining),
     breakSecondsTotal: breakSecondsTotal,
     isBreakActive,
-    isPaused
+    isPaused,
+    pauseReason
   };
 
   for (const win of overlayWindows) {
@@ -468,6 +486,12 @@ function getTimeDisplay() {
     const s = breakSecondsRemaining % 60;
     return `Break ends in ${m}:${s.toString().padStart(2, '0')}`;
   }
+  if (pauseReason === 'idle') {
+    return 'Paused while away';
+  }
+  if (pauseReason === 'manual') {
+    return 'Paused';
+  }
   const m = Math.floor(workSecondsRemaining / 60);
   const s = workSecondsRemaining % 60;
   return `Next break in ${m}:${s.toString().padStart(2, '0')}`;
@@ -475,14 +499,55 @@ function getTimeDisplay() {
 
 function pauseTimer() {
   isPaused = true;
+  pauseReason = 'manual';
   updateTrayMenu();
   broadcastTimerStatus();
 }
 
 function resumeTimer() {
   isPaused = false;
+  pauseReason = null;
+  idleMaxSecondsSeen = 0;
   updateTrayMenu();
   broadcastTimerStatus();
+}
+
+function updateIdlePauseState() {
+  const settings = loadSettings();
+
+  if (!settings.autoPauseOnIdle || isBreakActive) {
+    if (pauseReason === 'idle') {
+      resumeTimer();
+    }
+    return;
+  }
+
+  let idleSeconds = 0;
+  try {
+    idleSeconds = powerMonitor.getSystemIdleTime();
+  } catch (_) {
+    return;
+  }
+
+  if (pauseReason === 'idle') {
+    idleMaxSecondsSeen = Math.max(idleMaxSecondsSeen, idleSeconds);
+
+    if (idleSeconds <= 1) {
+      if (idleMaxSecondsSeen >= settings.breakDuration) {
+        workSecondsRemaining = settings.workInterval * 60;
+      }
+      resumeTimer();
+    }
+    return;
+  }
+
+  if (!isPaused && idleSeconds >= settings.idlePauseThreshold) {
+    isPaused = true;
+    pauseReason = 'idle';
+    idleMaxSecondsSeen = idleSeconds;
+    updateTrayMenu();
+    broadcastTimerStatus();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -509,7 +574,8 @@ function setupIPC() {
     breakSecondsRemaining: Math.max(0, breakSecondsRemaining),
     breakSecondsTotal,
     isBreakActive,
-    isPaused
+    isPaused,
+    pauseReason
   }));
 
   ipcMain.on('dismiss-break', () => {
