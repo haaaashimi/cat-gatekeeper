@@ -28,7 +28,7 @@
   ],
   "scripts": {
     "start": "electron .",
-    "start:dev": "cross-env WORK_INTERVAL=1 BREAK_DURATION=15 electron .",
+    "start:dev": "cross-env WORK_INTERVAL=2 BREAK_DURATION=180 electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win --mac --linux",
     "dist:mac": "electron-builder --mac",

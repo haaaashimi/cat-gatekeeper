@@ -23,7 +23,7 @@ const DEFAULT_SETTINGS = {
   breakDuration: 300, // seconds (5 minutes - HSE guideline)
   snoozeDuration: 300, // seconds (5 minutes default)
   autoPauseOnIdle: true,
-  idlePauseThreshold: 300, // seconds (5 minutes)
+  idlePauseThreshold: 180, // seconds (3 minutes)
   soundEnabled: false,
   multiMonitor: true,
   videoPath: '',           // empty = use bundled default
@@ -158,7 +158,7 @@ let breakSecondsTotal = 0;
 let isBreakActive = false;
 let isPaused = false;
 let pauseReason = null; // null | 'manual' | 'idle'
-let idleMaxSecondsSeen = 0;
+let idlePauseStartedAt = null;
 let audioWindow = null;  // persistent hidden window for sound playback
 
 // ---------------------------------------------------------------------------
@@ -266,7 +266,7 @@ function startTimer() {
   isBreakActive = false;
   isPaused = false;
   pauseReason = null;
-  idleMaxSecondsSeen = 0;
+  idlePauseStartedAt = null;
   broadcastTimerStatus();
 
   timerInterval = setInterval(() => {
@@ -351,7 +351,7 @@ function resetTimer() {
   isBreakActive = false;
   isPaused = false;
   pauseReason = null;
-  idleMaxSecondsSeen = 0;
+  idlePauseStartedAt = null;
   closeOverlayWindows();
   startTimer();
   updateTrayMenu();
@@ -507,7 +507,7 @@ function pauseTimer() {
 function resumeTimer() {
   isPaused = false;
   pauseReason = null;
-  idleMaxSecondsSeen = 0;
+  idlePauseStartedAt = null;
   updateTrayMenu();
   broadcastTimerStatus();
 }
@@ -530,10 +530,12 @@ function updateIdlePauseState() {
   }
 
   if (pauseReason === 'idle') {
-    idleMaxSecondsSeen = Math.max(idleMaxSecondsSeen, idleSeconds);
-
     if (idleSeconds <= 1) {
-      if (idleMaxSecondsSeen >= settings.breakDuration) {
+      const idlePauseSeconds = idlePauseStartedAt
+        ? Math.floor((Date.now() - idlePauseStartedAt) / 1000)
+        : 0;
+
+      if (idlePauseSeconds >= settings.breakDuration) {
         workSecondsRemaining = settings.workInterval * 60;
       }
       resumeTimer();
@@ -544,7 +546,7 @@ function updateIdlePauseState() {
   if (!isPaused && idleSeconds >= settings.idlePauseThreshold) {
     isPaused = true;
     pauseReason = 'idle';
-    idleMaxSecondsSeen = idleSeconds;
+    idlePauseStartedAt = Date.now();
     updateTrayMenu();
     broadcastTimerStatus();
   }
