@@ -11,6 +11,10 @@
   const breakDurationValue = document.getElementById('breakDurationValue');
   const snoozeDurationInput = document.getElementById('snoozeDuration');
   const snoozeDurationValue = document.getElementById('snoozeDurationValue');
+  const autoPauseOnIdleInput = document.getElementById('autoPauseOnIdle');
+  const idlePauseThresholdInput = document.getElementById('idlePauseThreshold');
+  const idlePauseThresholdValue = document.getElementById('idlePauseThresholdValue');
+  const idlePauseThresholdRow = document.getElementById('idlePauseThresholdRow');
   const soundEnabledInput = document.getElementById('soundEnabled');
   const multiMonitorInput = document.getElementById('multiMonitor');
   const selectVideoBtn = document.getElementById('selectVideoBtn');
@@ -49,6 +53,11 @@
       snoozeDurationInput.value = settings.snoozeDuration || 300;
       snoozeDurationValue.textContent = `${Math.round((settings.snoozeDuration || 300) / 60)} min`;
 
+      autoPauseOnIdleInput.checked = settings.autoPauseOnIdle !== false;
+      idlePauseThresholdInput.value = settings.idlePauseThreshold || 300;
+      idlePauseThresholdValue.textContent = `${Math.round((settings.idlePauseThreshold || 300) / 60)} min`;
+      idlePauseThresholdRow.style.opacity = settings.autoPauseOnIdle !== false ? '1' : '0.35';
+
       soundEnabledInput.checked = settings.soundEnabled;
       multiMonitorInput.checked = settings.multiMonitor;
 
@@ -75,6 +84,8 @@
     const currentWorkInterval = parseInt(workIntervalInput.value, 10);
     const currentBreakDuration = parseInt(breakDurationInput.value, 10);
     const currentSnoozeDuration = parseInt(snoozeDurationInput.value, 10);
+    const currentAutoPauseOnIdle = autoPauseOnIdleInput.checked;
+    const currentIdlePauseThreshold = parseInt(idlePauseThresholdInput.value, 10);
     const currentSoundEnabled = soundEnabledInput.checked;
     const currentMultiMonitor = multiMonitorInput.checked;
     const currentVideoPath = selectedVideoPath || '';
@@ -85,6 +96,8 @@
       currentWorkInterval !== currentSettings.workInterval ||
       currentBreakDuration !== currentSettings.breakDuration ||
       currentSnoozeDuration !== (currentSettings.snoozeDuration || 300) ||
+      currentAutoPauseOnIdle !== (currentSettings.autoPauseOnIdle !== false) ||
+      currentIdlePauseThreshold !== (currentSettings.idlePauseThreshold || 300) ||
       currentSoundEnabled !== currentSettings.soundEnabled ||
       currentMultiMonitor !== currentSettings.multiMonitor ||
       currentVideoPath !== (currentSettings.videoPath || '') ||
@@ -105,6 +118,8 @@
       workInterval: parseInt(workIntervalInput.value, 10),
       breakDuration: parseInt(breakDurationInput.value, 10),
       snoozeDuration: parseInt(snoozeDurationInput.value, 10),
+      autoPauseOnIdle: autoPauseOnIdleInput.checked,
+      idlePauseThreshold: parseInt(idlePauseThresholdInput.value, 10),
       soundEnabled: soundEnabledInput.checked,
       multiMonitor: multiMonitorInput.checked,
       videoPath: selectedVideoPath || '',
@@ -145,6 +160,9 @@
     if (data.isBreakActive) {
       statusValue.textContent = `Break ends in ${formatTime(data.breakSecondsRemaining)}`;
       statusValue.style.color = '#d4a373';
+    } else if (data.pauseReason === 'idle') {
+      statusValue.textContent = `Paused while away, ${formatTime(data.workSecondsRemaining)} left`;
+      statusValue.style.color = '#f39c12';
     } else if (data.isPaused) {
       statusValue.textContent = 'Paused';
       statusValue.style.color = '#e74c3c';
@@ -182,6 +200,17 @@
 
     snoozeDurationInput.addEventListener('input', () => {
       snoozeDurationValue.textContent = `${Math.round(snoozeDurationInput.value / 60)} min`;
+      checkForChanges();
+    });
+
+    autoPauseOnIdleInput.addEventListener('change', () => {
+      const enabled = autoPauseOnIdleInput.checked;
+      idlePauseThresholdRow.style.opacity = enabled ? '1' : '0.35';
+      checkForChanges();
+    });
+
+    idlePauseThresholdInput.addEventListener('input', () => {
+      idlePauseThresholdValue.textContent = `${Math.round(idlePauseThresholdInput.value / 60)} min`;
       checkForChanges();
     });
 

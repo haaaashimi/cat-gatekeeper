@@ -62,6 +62,31 @@
       </div>
     </div>
 
+    <!-- Away Detection -->
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Pause When Away</span>
+        <span class="label-desc">Pause the timer when there is no keyboard or mouse input</span>
+      </div>
+      <div class="setting-control">
+        <label class="toggle">
+          <input type="checkbox" id="autoPauseOnIdle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-row" id="idlePauseThresholdRow">
+      <div class="setting-label">
+        <span class="label-text">Away After</span>
+        <span class="label-desc">If away for a full break, the next work interval starts fresh</span>
+      </div>
+      <div class="setting-control">
+        <input type="range" id="idlePauseThreshold" min="60" max="900" value="300" step="60">
+        <span class="range-value" id="idlePauseThresholdValue">5 min</span>
+      </div>
+    </div>
+
     <!-- HSE Health Info -->
     <div class="health-info">
       <div class="health-info-title">Health Guidelines</div>
