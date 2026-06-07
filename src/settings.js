@@ -15,6 +15,9 @@
   const idlePauseThresholdInput = document.getElementById('idlePauseThreshold');
   const idlePauseThresholdValue = document.getElementById('idlePauseThresholdValue');
   const idlePauseThresholdRow = document.getElementById('idlePauseThresholdRow');
+  const pauseMediaOnBreakInput = document.getElementById('pauseMediaOnBreak');
+  const autoResumeMediaAfterBreakInput = document.getElementById('autoResumeMediaAfterBreak');
+  const autoResumeMediaAfterBreakRow = document.getElementById('autoResumeMediaAfterBreakRow');
   const soundEnabledInput = document.getElementById('soundEnabled');
   const multiMonitorInput = document.getElementById('multiMonitor');
   const selectVideoBtn = document.getElementById('selectVideoBtn');
@@ -58,6 +61,10 @@
       idlePauseThresholdValue.textContent = `${Math.round((settings.idlePauseThreshold || 300) / 60)} min`;
       idlePauseThresholdRow.style.opacity = settings.autoPauseOnIdle !== false ? '1' : '0.35';
 
+      pauseMediaOnBreakInput.checked = settings.pauseMediaOnBreak !== false;
+      autoResumeMediaAfterBreakInput.checked = settings.autoResumeMediaAfterBreak === true;
+      updateMediaSettingsState();
+
       soundEnabledInput.checked = settings.soundEnabled;
       multiMonitorInput.checked = settings.multiMonitor;
 
@@ -86,6 +93,8 @@
     const currentSnoozeDuration = parseInt(snoozeDurationInput.value, 10);
     const currentAutoPauseOnIdle = autoPauseOnIdleInput.checked;
     const currentIdlePauseThreshold = parseInt(idlePauseThresholdInput.value, 10);
+    const currentPauseMediaOnBreak = pauseMediaOnBreakInput.checked;
+    const currentAutoResumeMediaAfterBreak = autoResumeMediaAfterBreakInput.checked;
     const currentSoundEnabled = soundEnabledInput.checked;
     const currentMultiMonitor = multiMonitorInput.checked;
     const currentVideoPath = selectedVideoPath || '';
@@ -98,6 +107,8 @@
       currentSnoozeDuration !== (currentSettings.snoozeDuration || 300) ||
       currentAutoPauseOnIdle !== (currentSettings.autoPauseOnIdle !== false) ||
       currentIdlePauseThreshold !== (currentSettings.idlePauseThreshold || 300) ||
+      currentPauseMediaOnBreak !== (currentSettings.pauseMediaOnBreak !== false) ||
+      currentAutoResumeMediaAfterBreak !== (currentSettings.autoResumeMediaAfterBreak === true) ||
       currentSoundEnabled !== currentSettings.soundEnabled ||
       currentMultiMonitor !== currentSettings.multiMonitor ||
       currentVideoPath !== (currentSettings.videoPath || '') ||
@@ -120,6 +131,8 @@
       snoozeDuration: parseInt(snoozeDurationInput.value, 10),
       autoPauseOnIdle: autoPauseOnIdleInput.checked,
       idlePauseThreshold: parseInt(idlePauseThresholdInput.value, 10),
+      pauseMediaOnBreak: pauseMediaOnBreakInput.checked,
+      autoResumeMediaAfterBreak: autoResumeMediaAfterBreakInput.checked,
       soundEnabled: soundEnabledInput.checked,
       multiMonitor: multiMonitorInput.checked,
       videoPath: selectedVideoPath || '',
@@ -214,6 +227,13 @@
       checkForChanges();
     });
 
+    pauseMediaOnBreakInput.addEventListener('change', () => {
+      updateMediaSettingsState();
+      checkForChanges();
+    });
+
+    autoResumeMediaAfterBreakInput.addEventListener('change', checkForChanges);
+
     // Save
     saveBtn.addEventListener('click', saveSettings);
 
@@ -266,6 +286,12 @@
         window.close();
       }
     });
+  }
+
+  function updateMediaSettingsState() {
+    const enabled = pauseMediaOnBreakInput.checked;
+    autoResumeMediaAfterBreakInput.disabled = !enabled;
+    autoResumeMediaAfterBreakRow.style.opacity = enabled ? '1' : '0.35';
   }
 
   // -----------------------------------------------------------------------

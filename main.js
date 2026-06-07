@@ -11,6 +11,7 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { createMediaController } = require('./media-controller');
 
 // ---------------------------------------------------------------------------
 // Settings persistence (manual JSON store to avoid ESM import issues with electron-store in CJS)
@@ -18,12 +19,14 @@ const fs = require('fs');
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
 const DEFAULT_SETTINGS = {
-  version: 4,  // Increment when defaults change to trigger migration
+  version: 5,  // Increment when defaults change to trigger migration
   workInterval: 50,  // minutes (HSE: 5-10 min break per hour)
   breakDuration: 300, // seconds (5 minutes - HSE guideline)
   snoozeDuration: 300, // seconds (5 minutes default)
   autoPauseOnIdle: true,
   idlePauseThreshold: 180, // seconds (3 minutes)
+  pauseMediaOnBreak: true,
+  autoResumeMediaAfterBreak: false,
   soundEnabled: false,
   multiMonitor: true,
   videoPath: '',           // empty = use bundled default
@@ -84,11 +87,18 @@ function migrateSettings(oldData, currentSettings) {
     currentSettings.idlePauseThreshold = DEFAULT_SETTINGS.idlePauseThreshold;
   }
 
+  // Migration from v4 to v5: Pause external media during breaks
+  if (version < 5) {
+    console.log('Adding break media control defaults (v4 → v5)');
+    currentSettings.pauseMediaOnBreak = DEFAULT_SETTINGS.pauseMediaOnBreak;
+    currentSettings.autoResumeMediaAfterBreak = DEFAULT_SETTINGS.autoResumeMediaAfterBreak;
+  }
+
   // Update version to latest
   currentSettings.version = DEFAULT_SETTINGS.version;
 
-  // Save migrated settings
-  saveSettings(currentSettings);
+  // Write directly so migration does not re-enter loadSettings through saveSettings.
+  fs.writeFileSync(settingsPath, JSON.stringify(currentSettings, null, 2), 'utf-8');
 
   return currentSettings;
 }
@@ -160,6 +170,9 @@ let isPaused = false;
 let pauseReason = null; // null | 'manual' | 'idle'
 let idlePauseStartedAt = null;
 let audioWindow = null;  // persistent hidden window for sound playback
+let mediaBreakGeneration = 0;
+let activeMediaPausePromise = Promise.resolve([]);
+const mediaController = createMediaController();
 
 // ---------------------------------------------------------------------------
 // Window factories
@@ -227,7 +240,7 @@ function createSettingsWindow() {
 
   settingsWindow = new BrowserWindow({
     width: 520,
-    height: 720,
+    height: 800,
     resizable: false,
     title: 'Cat Gatekeeper Settings',
     autoHideMenuBar: true,
@@ -300,6 +313,7 @@ function startBreak() {
   isBreakActive = true;
   breakSecondsRemaining = settings.breakDuration;
   breakSecondsTotal = settings.breakDuration;
+  pauseMediaForBreak(settings);
 
   // Send break-start to settings window
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -323,14 +337,15 @@ function startBreak() {
 }
 
 function endBreak() {
+  const settings = loadSettings();
   isBreakActive = false;
   closeOverlayWindows();
+  finishMediaForBreak(settings);
 
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     try { settingsWindow.webContents.send('break-end'); } catch (_) { }
   }
 
-  const settings = loadSettings();
   workSecondsRemaining = settings.workInterval * 60;
   broadcastTimerStatus();
 
@@ -345,6 +360,9 @@ function snoozeBreak() {
 }
 
 function resetTimer() {
+  if (isBreakActive) {
+    endBreak();
+  }
   stopTimer();
   const settings = loadSettings();
   workSecondsRemaining = settings.workInterval * 60;
@@ -356,6 +374,38 @@ function resetTimer() {
   startTimer();
   updateTrayMenu();
   broadcastTimerStatus();
+}
+
+function pauseMediaForBreak(settings) {
+  const generation = ++mediaBreakGeneration;
+  activeMediaPausePromise = settings.pauseMediaOnBreak
+    ? mediaController.pausePlaying()
+    : Promise.resolve([]);
+
+  activeMediaPausePromise.then((sessions) => {
+    if (isBreakActive && mediaBreakGeneration === generation && sessions.length > 0) {
+      console.log(`Cat Gatekeeper: paused ${sessions.length} media session(s)`);
+    }
+  });
+}
+
+function finishMediaForBreak(settings) {
+  const generation = mediaBreakGeneration;
+  const pausePromise = activeMediaPausePromise;
+  mediaBreakGeneration++;
+  activeMediaPausePromise = Promise.resolve([]);
+
+  if (!settings.pauseMediaOnBreak || !settings.autoResumeMediaAfterBreak) {
+    return Promise.resolve();
+  }
+
+  return pausePromise.then((sessions) => {
+    // Never resume old media into a later break or after another lifecycle change.
+    if (!isBreakActive && mediaBreakGeneration === generation + 1) {
+      return mediaController.resume(sessions);
+    }
+    return undefined;
+  });
 }
 
 function ensureAudioWindow() {
@@ -659,8 +709,22 @@ app.on('window-all-closed', () => {
   // Keep running in tray — don't quit
 });
 
-app.on('before-quit', () => {
+let isCompletingQuit = false;
+app.on('before-quit', (event) => {
   app.isQuitting = true;
+
+  if (isBreakActive && !isCompletingQuit) {
+    event.preventDefault();
+    const settings = loadSettings();
+    isBreakActive = false;
+    closeOverlayWindows();
+    finishMediaForBreak(settings).finally(() => {
+      isCompletingQuit = true;
+      app.quit();
+    });
+    return;
+  }
+
   stopTimer();
   if (audioWindow && !audioWindow.isDestroyed()) audioWindow.destroy();
 });

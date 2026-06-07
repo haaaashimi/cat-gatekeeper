@@ -50,7 +50,10 @@ jobs:
       
       - name: Build macOS
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
+        run: |
+          npm run build:mac-helper
+          npm run verify:mac-helper
+          npm run dist:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       

@@ -16,6 +16,7 @@ When your work interval is up, a cat slides in from the side of your screen and 
 - **Multi-monitor** — works across all your displays
 - **Custom videos** — use your own cat videos (WIP)
 - **Snooze** — add 5 minutes when you're in the zone
+- **Media control** — pauses supported video and audio during breaks, with optional automatic resume
 
 ## 🚀 Quick Start
 
@@ -164,7 +165,22 @@ cat-gatekeeper/
 | Snooze duration | 5 min (300 sec) | configurable |
 | Sound effect | disabled | on/off |
 | Multi-monitor | enabled | on/off |
+| Pause media during breaks | enabled | on/off |
+| Resume media after breaks | disabled | on/off |
 | Cat video | bundled neko1.webm (active) + neko2.webm (sleeping) | user-selectable |
+
+### External Media Support
+
+Cat Gatekeeper uses explicit pause and play commands and never sends a blind
+Play/Pause toggle. Automatic resume only targets media that Cat Gatekeeper
+successfully paused.
+
+- **Windows:** Uses Windows Global System Media Transport Controls.
+- **Linux:** Requires `playerctl` and an MPRIS-compatible player.
+- **macOS:** Includes `nowplaying-cli`; no separate installation is required.
+  Support is best-effort because the utility relies on Apple's private
+  MediaRemote framework. Its GPLv3 license and corresponding source are
+  included in the app bundle.
 
 ## 📦 Building for Distribution
 

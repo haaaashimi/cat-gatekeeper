@@ -87,6 +87,39 @@
       </div>
     </div>
 
+    <!-- Media Control -->
+    <div class="setting-group-header">External Media</div>
+    <p class="setting-group-desc">
+      Windows and macOS support are built in. Linux requires playerctl.
+      Unsupported players are left unchanged.
+    </p>
+
+    <div class="setting-row">
+      <div class="setting-label">
+        <span class="label-text">Pause Media During Breaks</span>
+        <span class="label-desc">Pause supported videos and audio before the cat blocks input</span>
+      </div>
+      <div class="setting-control">
+        <label class="toggle">
+          <input type="checkbox" id="pauseMediaOnBreak" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-row" id="autoResumeMediaAfterBreakRow">
+      <div class="setting-label">
+        <span class="label-text">Resume Media After Breaks</span>
+        <span class="label-desc">Resume only media Cat Gatekeeper successfully paused</span>
+      </div>
+      <div class="setting-control">
+        <label class="toggle">
+          <input type="checkbox" id="autoResumeMediaAfterBreak">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
     <!-- HSE Health Info -->
     <div class="health-info">
       <div class="health-info-title">Health Guidelines</div>
