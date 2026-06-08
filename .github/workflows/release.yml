@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -50,7 +50,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       
       - name: Cache dependencies
@@ -75,13 +75,13 @@ jobs:
         run: |
           npm run build:mac-helper
           npm run verify:mac-helper
-          npm run dist:mac
+          npm run dist:mac:ci
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: npm run dist:win
+        run: npm run dist:win:ci
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

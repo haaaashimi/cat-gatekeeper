@@ -121,6 +121,8 @@ node --check break-media-manager.js
 node --check media-controller.js
 node --check settings-store.js
 bash -n scripts/build-nowplaying-cli.sh
+bash -n scripts/verify-macos-app.sh
+node --check scripts/run-with-retries.js
 ```
 
 On a macOS build machine, verify the packaged application, bundled native
@@ -137,9 +139,11 @@ Installer builds start only after all test jobs pass.
 
 Platform-specific CI checks:
 
-- macOS verifies the bundled helper before building, then checks the packaged
-  app signature, helper executable, GPL license, and corresponding source.
+- macOS verifies the bundled helper before building. Pull-request builds check
+  packaged resources without requiring a signature because electron-builder
+  skips PR signing; release builds also verify signatures.
 - Windows parses the PowerShell media helper to catch syntax errors.
+- macOS and Windows installer builds retry transient electron-builder downloads.
 - Ubuntu verifies the platform-independent lifecycle, settings, adapter, and
   package-contract tests.
 

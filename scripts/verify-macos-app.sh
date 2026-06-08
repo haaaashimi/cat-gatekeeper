@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+VERIFY_SIGNATURES=true
 APP_PATH="${1:-}"
+
+if [[ "$APP_PATH" == "--resources-only" ]]; then
+  VERIFY_SIGNATURES=false
+  APP_PATH="${2:-}"
+fi
 if [[ -z "$APP_PATH" ]]; then
   APP_PATH="$(find dist -maxdepth 2 -type d -name 'Cat Gatekeeper.app' -print -quit)"
 fi
@@ -22,10 +28,14 @@ test -f "$DYLIB"
 test -f "$LICENSE"
 test -s "$SOURCE"
 
-# Verify the app's sealed resources and our additional native binaries
-# separately. Electron Builder signs its nested Electron frameworks.
-codesign --verify --strict --verbose=2 "$APP_PATH"
-codesign --verify --strict --verbose=2 "$HELPER"
-codesign --verify --strict --verbose=2 "$DYLIB"
+if [[ "$VERIFY_SIGNATURES" == true ]]; then
+  # Verify the app's sealed resources and our additional native binaries
+  # separately. Electron Builder signs its nested Electron frameworks.
+  codesign --verify --strict --verbose=2 "$APP_PATH"
+  codesign --verify --strict --verbose=2 "$HELPER"
+  codesign --verify --strict --verbose=2 "$DYLIB"
+else
+  echo "Skipping signature verification for unsigned pull-request build."
+fi
 
 echo "Verified packaged macOS app and bundled media helper."

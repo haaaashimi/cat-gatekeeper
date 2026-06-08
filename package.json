@@ -37,6 +37,8 @@
     "dist": "electron-builder --win --mac --linux",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
+    "dist:mac:ci": "node scripts/run-with-retries.js 3 npm run dist:mac",
+    "dist:win:ci": "node scripts/run-with-retries.js 3 npm run dist:win",
     "dist:linux": "electron-builder --linux"
   },
   "build": {

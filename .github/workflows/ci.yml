@@ -35,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -84,7 +84,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'  # Built-in caching (2026 best practice)
       
       - name: Install dependencies
@@ -101,17 +101,17 @@ jobs:
         run: |
           npm run build:mac-helper
           npm run verify:mac-helper
-          npm run dist:mac
+          npm run dist:mac:ci
       
       - name: Build for Windows
         if: matrix.os == 'windows-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:win
+        run: npm run dist:win:ci
 
       - name: Verify packaged macOS app
         if: matrix.os == 'macos-latest'
-        run: npm run verify:mac-app
+        run: npm run verify:mac-app -- --resources-only
       
       - name: Verify build output
         shell: bash  # Ensure cross-platform compatibility

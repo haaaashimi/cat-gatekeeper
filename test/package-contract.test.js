@@ -25,6 +25,8 @@ test('macOS helper, licenses, and corresponding source are packaged', () => {
   assert.ok(resources.some(item => item.to === 'licenses/nowplaying-cli/source'));
   assert.equal(packageJson.build.mac.binaries.length, 2);
   assert.equal(packageJson.scripts['verify:mac-app'], 'bash scripts/verify-macos-app.sh');
+  assert.match(packageJson.scripts['dist:mac:ci'], /run-with-retries\.js 3 npm run dist:mac/);
+  assert.match(packageJson.scripts['dist:win:ci'], /run-with-retries\.js 3 npm run dist:win/);
 });
 
 test('settings UI exposes both media controls and settings script binds them', () => {
