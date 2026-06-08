@@ -76,6 +76,8 @@ jobs:
       
       - name: Build macOS
         if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm run build:mac-helper
           npm run verify:mac-helper
@@ -83,6 +85,8 @@ jobs:
       
       - name: Build Windows
         if: matrix.os == 'windows-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:win:ci
 
       - name: Verify packaged macOS app resources

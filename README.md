@@ -48,13 +48,26 @@ For most users, we recommend downloading the latest release:
 
 > **⚠️ Important for macOS users:**
 > 
-> Since Cat Gatekeeper is not signed with an Apple Developer certificate, macOS Gatekeeper will block it on first launch with a message like:
+> Since Cat Gatekeeper is not signed with an Apple Developer certificate, macOS Gatekeeper will block it. You may see one of these messages:
 > 
-> _"Cat Gatekeeper" cannot be opened because the developer cannot be verified._
+> - _"Cat Gatekeeper.dmg" is damaged and can't be opened._
+> - _"Cat Gatekeeper" cannot be opened because the developer cannot be verified._
 > 
-> **This is a standard macOS security feature, not a problem with the app.** The app is open-source and safe to use.
+> **These are standard macOS security responses for unsigned apps, not a problem with the app.** The app is open-source and safe to use.
 > 
-> **To open the app:**
+> **Fix 1: Remove quarantine from the DMG (recommended)**
+> 
+> Open Terminal and run this command on the downloaded DMG **before** opening it:
+> 
+> ```bash
+> xattr -d com.apple.quarantine ~/Downloads/Cat.Gatekeeper-*.dmg
+> ```
+> 
+> Then double-click the DMG to mount it and drag the app to Applications.
+> 
+> **Fix 2: Allow via System Settings (after install)**
+> 
+> If you already installed the app and see the "cannot be verified" message:
 > 
 > 1. **Don't click "Move to Trash"** — click **Cancel** or the **X** button
 > 2. Open **System Settings** (or System Preferences)
@@ -64,7 +77,7 @@ For most users, we recommend downloading the latest release:
 > 6. Click **Open Anyway**
 > 7. A second dialog will appear — click **Open**
 > 
-> **Alternative method (via Terminal):**
+> **Fix 3: Remove quarantine from installed app**
 > 
 > ```bash
 > xattr -d com.apple.quarantine /Applications/Cat\ Gatekeeper.app

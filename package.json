@@ -78,6 +78,9 @@
     "mac": {
       "target": "dmg",
       "icon": "build/icon.png",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null,
       "extraResources": [
         {
           "from": "vendor/nowplaying-cli/darwin-${arch}",
