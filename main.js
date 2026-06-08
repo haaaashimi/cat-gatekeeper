@@ -11,93 +11,17 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { createBreakMediaManager } = require('./break-media-manager');
+const { createMediaController } = require('./media-controller');
+const { createSettingsStore } = require('./settings-store');
 
 // ---------------------------------------------------------------------------
 // Settings persistence (manual JSON store to avoid ESM import issues with electron-store in CJS)
 // ---------------------------------------------------------------------------
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-
-const DEFAULT_SETTINGS = {
-  version: 4,  // Increment when defaults change to trigger migration
-  workInterval: 50,  // minutes (HSE: 5-10 min break per hour)
-  breakDuration: 300, // seconds (5 minutes - HSE guideline)
-  snoozeDuration: 300, // seconds (5 minutes default)
-  autoPauseOnIdle: true,
-  idlePauseThreshold: 180, // seconds (3 minutes)
-  soundEnabled: false,
-  multiMonitor: true,
-  videoPath: '',           // empty = use bundled default
-  chromaKeyEnabled: false,
-  chromaKeyColor: '#00FF00'  // green screen default
-};
-
-function loadSettings() {
-  let settings;
-  try {
-    if (fs.existsSync(settingsPath)) {
-      const data = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      settings = { ...DEFAULT_SETTINGS, ...data };
-
-      // Migrate old settings to new defaults if version is outdated
-      if (!data.version || data.version < DEFAULT_SETTINGS.version) {
-        console.log(`Migrating settings from v${data.version || 1} to v${DEFAULT_SETTINGS.version}`);
-        settings = migrateSettings(data, settings);
-      }
-    } else {
-      settings = { ...DEFAULT_SETTINGS };
-    }
-  } catch (_) { /* ignore corrupt file */
-    settings = { ...DEFAULT_SETTINGS };
-  }
-
-  // Environment variables always take precedence (for dev/testing)
-  if (process.env.WORK_INTERVAL) {
-    settings.workInterval = parseInt(process.env.WORK_INTERVAL, 10);
-  }
-  if (process.env.BREAK_DURATION) {
-    settings.breakDuration = parseInt(process.env.BREAK_DURATION, 10);
-  }
-
-  return settings;
-}
-
-function migrateSettings(oldData, currentSettings) {
-  const version = oldData.version || 1;
-
-  // Migration from v1 to v2: Update to HSE guidelines
-  if (version < 2) {
-    console.log('Applying HSE guideline defaults (v1 → v2)');
-    currentSettings.workInterval = DEFAULT_SETTINGS.workInterval;
-    currentSettings.breakDuration = DEFAULT_SETTINGS.breakDuration;
-  }
-
-  // Migration from v2 to v3: Add snooze duration
-  if (version < 3) {
-    console.log('Adding snooze duration default (v2 → v3)');
-    currentSettings.snoozeDuration = DEFAULT_SETTINGS.snoozeDuration;
-  }
-
-  // Migration from v3 to v4: Add automatic idle pause
-  if (version < 4) {
-    console.log('Adding automatic idle pause defaults (v3 → v4)');
-    currentSettings.autoPauseOnIdle = DEFAULT_SETTINGS.autoPauseOnIdle;
-    currentSettings.idlePauseThreshold = DEFAULT_SETTINGS.idlePauseThreshold;
-  }
-
-  // Update version to latest
-  currentSettings.version = DEFAULT_SETTINGS.version;
-
-  // Save migrated settings
-  saveSettings(currentSettings);
-
-  return currentSettings;
-}
-
-function saveSettings(settings) {
-  const merged = { ...loadSettings(), ...settings };
-  fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8');
-  return merged;
-}
+const settingsStore = createSettingsStore(settingsPath);
+const loadSettings = () => settingsStore.load();
+const saveSettings = settings => settingsStore.save(settings);
 
 // ---------------------------------------------------------------------------
 // Path helpers
@@ -160,6 +84,8 @@ let isPaused = false;
 let pauseReason = null; // null | 'manual' | 'idle'
 let idlePauseStartedAt = null;
 let audioWindow = null;  // persistent hidden window for sound playback
+const mediaController = createMediaController();
+const breakMediaManager = createBreakMediaManager(mediaController);
 
 // ---------------------------------------------------------------------------
 // Window factories
@@ -227,7 +153,7 @@ function createSettingsWindow() {
 
   settingsWindow = new BrowserWindow({
     width: 520,
-    height: 720,
+    height: 800,
     resizable: false,
     title: 'Cat Gatekeeper Settings',
     autoHideMenuBar: true,
@@ -300,6 +226,7 @@ function startBreak() {
   isBreakActive = true;
   breakSecondsRemaining = settings.breakDuration;
   breakSecondsTotal = settings.breakDuration;
+  breakMediaManager.start(settings);
 
   // Send break-start to settings window
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -323,14 +250,15 @@ function startBreak() {
 }
 
 function endBreak() {
+  const settings = loadSettings();
   isBreakActive = false;
   closeOverlayWindows();
+  breakMediaManager.finish(settings);
 
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     try { settingsWindow.webContents.send('break-end'); } catch (_) { }
   }
 
-  const settings = loadSettings();
   workSecondsRemaining = settings.workInterval * 60;
   broadcastTimerStatus();
 
@@ -345,6 +273,9 @@ function snoozeBreak() {
 }
 
 function resetTimer() {
+  if (isBreakActive) {
+    endBreak();
+  }
   stopTimer();
   const settings = loadSettings();
   workSecondsRemaining = settings.workInterval * 60;
@@ -659,8 +590,22 @@ app.on('window-all-closed', () => {
   // Keep running in tray — don't quit
 });
 
-app.on('before-quit', () => {
+let isCompletingQuit = false;
+app.on('before-quit', (event) => {
   app.isQuitting = true;
+
+  if (isBreakActive && !isCompletingQuit) {
+    event.preventDefault();
+    const settings = loadSettings();
+    isBreakActive = false;
+    closeOverlayWindows();
+    breakMediaManager.finish(settings).finally(() => {
+      isCompletingQuit = true;
+      app.quit();
+    });
+    return;
+  }
+
   stopTimer();
   if (audioWindow && !audioWindow.isDestroyed()) audioWindow.destroy();
 });

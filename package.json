@@ -29,10 +29,16 @@
   "scripts": {
     "start": "electron .",
     "start:dev": "cross-env WORK_INTERVAL=2 BREAK_DURATION=180 electron .",
+    "test": "node --test",
+    "build:mac-helper": "bash scripts/build-nowplaying-cli.sh",
+    "verify:mac-helper": "node scripts/verify-nowplaying-bundle.js",
+    "verify:mac-app": "bash scripts/verify-macos-app.sh",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win --mac --linux",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
+    "dist:mac:ci": "node scripts/run-with-retries.js 3 npm run dist:mac",
+    "dist:win:ci": "node scripts/run-with-retries.js 3 npm run dist:win",
     "dist:linux": "electron-builder --linux"
   },
   "build": {
@@ -44,9 +50,16 @@
     },
     "files": [
       "main.js",
+      "break-media-manager.js",
+      "media-controller.js",
       "preload.js",
+      "settings-store.js",
+      "scripts/windows-media-control.ps1",
       "src/**/*",
       "!src/assets/cat.mp4"
+    ],
+    "asarUnpack": [
+      "scripts/windows-media-control.ps1"
     ],
     "extraResources": [
       {
@@ -61,7 +74,29 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "extraResources": [
+        {
+          "from": "vendor/nowplaying-cli/darwin-${arch}",
+          "to": "bin/nowplaying-cli"
+        },
+        {
+          "from": "vendor/nowplaying-cli/LICENSE",
+          "to": "licenses/nowplaying-cli/LICENSE"
+        },
+        {
+          "from": "vendor/nowplaying-cli/NOTICE.md",
+          "to": "licenses/nowplaying-cli/NOTICE.md"
+        },
+        {
+          "from": "vendor/nowplaying-cli/source",
+          "to": "licenses/nowplaying-cli/source"
+        }
+      ],
+      "binaries": [
+        "Contents/Resources/bin/nowplaying-cli/nowplaying-cli",
+        "Contents/Resources/bin/nowplaying-cli/build/mediaremote-mini/MediaRemoteMini.dylib"
+      ]
     },
     "nsis": {
       "oneClick": false,

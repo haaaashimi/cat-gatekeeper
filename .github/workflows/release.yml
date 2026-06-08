@@ -10,8 +10,30 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run test suite
+        run: npm test
+
   release:
     name: Build (${{ matrix.os }})
+    needs: test
     runs-on: ${{ matrix.os }}
     
     strategy:
@@ -28,7 +50,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       
       - name: Cache dependencies
@@ -45,20 +67,27 @@ jobs:
         run: npm ci --prefer-offline --no-audit
       
       - name: Dependency audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
+        shell: bash
+        run: npm audit --audit-level=high || echo "Dependency audit reported advisories; continuing release build."
       
       - name: Build macOS
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
+        run: |
+          npm run build:mac-helper
+          npm run verify:mac-helper
+          npm run dist:mac:ci
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: npm run dist:win
+        run: npm run dist:win:ci
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify packaged macOS app
+        if: matrix.os == 'macos-latest'
+        run: npm run verify:mac-app
       
       - name: Upload macOS artifacts
         if: matrix.os == 'macos-latest'

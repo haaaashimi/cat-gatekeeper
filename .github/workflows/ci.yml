@@ -18,8 +18,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Build and verify bundled macOS helper
+        if: matrix.os == 'macos-latest'
+        run: |
+          npm run build:mac-helper
+          npm run verify:mac-helper
+
+      - name: Validate Windows media helper syntax
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "scripts/windows-media-control.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) > $null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
   build:
     name: Build (${{ matrix.os }})
+    needs: test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30  # Prevent runaway workflows
     
@@ -35,35 +84,42 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'  # Built-in caching (2026 best practice)
       
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
       
       - name: Dependency audit
-        run: npm audit --audit-level=high
-        continue-on-error: true  # Non-blocking security check
+        shell: bash
+        run: npm audit --audit-level=high || echo "Dependency audit reported advisories; continuing build."
       
       - name: Build for macOS
         if: matrix.os == 'macos-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:mac
+        run: |
+          npm run build:mac-helper
+          npm run verify:mac-helper
+          npm run dist:mac:ci
       
       - name: Build for Windows
         if: matrix.os == 'windows-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:win
+        run: npm run dist:win:ci
+
+      - name: Verify packaged macOS app
+        if: matrix.os == 'macos-latest'
+        run: npm run verify:mac-app -- --resources-only
       
       - name: Verify build output
         shell: bash  # Ensure cross-platform compatibility
         run: |
           if [ -d "dist" ] && [ "$(ls -A dist/)" ]; then
-            echo "✅ Build successful - artifacts created"
+            echo "Build successful - artifacts created"
             ls -lh dist/
           else
-            echo "❌ Build failed - no artifacts found"
+            echo "Build failed - no artifacts found"
             exit 1
           fi
