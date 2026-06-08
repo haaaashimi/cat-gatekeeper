@@ -41,6 +41,9 @@
     "dist:win:ci": "node scripts/run-with-retries.js 3 npm run dist:win",
     "dist:linux": "electron-builder --linux --publish never"
   },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "build": {
     "appId": "com.catgatekeeper.app",
     "productName": "Cat Gatekeeper",
