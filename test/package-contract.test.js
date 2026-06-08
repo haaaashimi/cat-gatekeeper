@@ -24,6 +24,7 @@ test('macOS helper, licenses, and corresponding source are packaged', () => {
   assert.ok(resources.some(item => item.to === 'licenses/nowplaying-cli/NOTICE.md'));
   assert.ok(resources.some(item => item.to === 'licenses/nowplaying-cli/source'));
   assert.equal(packageJson.build.mac.binaries.length, 2);
+  assert.equal(packageJson.scripts['verify:mac-app'], 'bash scripts/verify-macos-app.sh');
 });
 
 test('settings UI exposes both media controls and settings script binds them', () => {

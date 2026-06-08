@@ -67,8 +67,8 @@ jobs:
         run: npm ci --prefer-offline --no-audit
       
       - name: Dependency audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
+        shell: bash
+        run: npm audit --audit-level=high || echo "Dependency audit reported advisories; continuing release build."
       
       - name: Build macOS
         if: matrix.os == 'macos-latest'
@@ -87,14 +87,7 @@ jobs:
 
       - name: Verify packaged macOS app
         if: matrix.os == 'macos-latest'
-        shell: bash
-        run: |
-          APP_PATH="$(find dist -maxdepth 2 -type d -name 'Cat Gatekeeper.app' -print -quit)"
-          test -n "$APP_PATH"
-          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-          test -x "$APP_PATH/Contents/Resources/bin/nowplaying-cli/nowplaying-cli"
-          test -f "$APP_PATH/Contents/Resources/licenses/nowplaying-cli/LICENSE"
-          test -f "$APP_PATH/Contents/Resources/licenses/nowplaying-cli/source/nowplaying-cli-8c8c1fa.tar.gz"
+        run: npm run verify:mac-app
       
       - name: Upload macOS artifacts
         if: matrix.os == 'macos-latest'

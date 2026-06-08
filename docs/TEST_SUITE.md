@@ -110,6 +110,7 @@ Run these checks before releasing:
 npm test
 npm run verify:mac-helper
 npm run pack
+npm run verify:mac-app
 ```
 
 Useful syntax checks:
@@ -122,11 +123,11 @@ node --check settings-store.js
 bash -n scripts/build-nowplaying-cli.sh
 ```
 
-On a macOS build machine, verify the packaged application signature:
+On a macOS build machine, verify the packaged application, bundled native
+helper signatures, license, and corresponding source:
 
 ```bash
-codesign --verify --deep --strict --verbose=2 \
-  "dist/mac-arm64/Cat Gatekeeper.app"
+npm run verify:mac-app
 ```
 
 ## Continuous Integration

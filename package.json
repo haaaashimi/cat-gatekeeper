@@ -32,6 +32,7 @@
     "test": "node --test",
     "build:mac-helper": "bash scripts/build-nowplaying-cli.sh",
     "verify:mac-helper": "node scripts/verify-nowplaying-bundle.js",
+    "verify:mac-app": "bash scripts/verify-macos-app.sh",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win --mac --linux",
     "dist:mac": "electron-builder --mac",
