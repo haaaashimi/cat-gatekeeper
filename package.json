@@ -34,12 +34,12 @@
     "verify:mac-helper": "node scripts/verify-nowplaying-bundle.js",
     "verify:mac-app": "bash scripts/verify-macos-app.sh",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --win --mac --linux",
-    "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win",
+    "dist": "electron-builder --win --mac --linux --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:win": "electron-builder --win --publish never",
     "dist:mac:ci": "node scripts/run-with-retries.js 3 npm run dist:mac",
     "dist:win:ci": "node scripts/run-with-retries.js 3 npm run dist:win",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "electron-builder --linux --publish never"
   },
   "build": {
     "appId": "com.catgatekeeper.app",
