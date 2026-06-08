@@ -11,103 +11,17 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { createBreakMediaManager } = require('./break-media-manager');
 const { createMediaController } = require('./media-controller');
+const { createSettingsStore } = require('./settings-store');
 
 // ---------------------------------------------------------------------------
 // Settings persistence (manual JSON store to avoid ESM import issues with electron-store in CJS)
 // ---------------------------------------------------------------------------
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-
-const DEFAULT_SETTINGS = {
-  version: 5,  // Increment when defaults change to trigger migration
-  workInterval: 50,  // minutes (HSE: 5-10 min break per hour)
-  breakDuration: 300, // seconds (5 minutes - HSE guideline)
-  snoozeDuration: 300, // seconds (5 minutes default)
-  autoPauseOnIdle: true,
-  idlePauseThreshold: 180, // seconds (3 minutes)
-  pauseMediaOnBreak: true,
-  autoResumeMediaAfterBreak: false,
-  soundEnabled: false,
-  multiMonitor: true,
-  videoPath: '',           // empty = use bundled default
-  chromaKeyEnabled: false,
-  chromaKeyColor: '#00FF00'  // green screen default
-};
-
-function loadSettings() {
-  let settings;
-  try {
-    if (fs.existsSync(settingsPath)) {
-      const data = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      settings = { ...DEFAULT_SETTINGS, ...data };
-
-      // Migrate old settings to new defaults if version is outdated
-      if (!data.version || data.version < DEFAULT_SETTINGS.version) {
-        console.log(`Migrating settings from v${data.version || 1} to v${DEFAULT_SETTINGS.version}`);
-        settings = migrateSettings(data, settings);
-      }
-    } else {
-      settings = { ...DEFAULT_SETTINGS };
-    }
-  } catch (_) { /* ignore corrupt file */
-    settings = { ...DEFAULT_SETTINGS };
-  }
-
-  // Environment variables always take precedence (for dev/testing)
-  if (process.env.WORK_INTERVAL) {
-    settings.workInterval = parseInt(process.env.WORK_INTERVAL, 10);
-  }
-  if (process.env.BREAK_DURATION) {
-    settings.breakDuration = parseInt(process.env.BREAK_DURATION, 10);
-  }
-
-  return settings;
-}
-
-function migrateSettings(oldData, currentSettings) {
-  const version = oldData.version || 1;
-
-  // Migration from v1 to v2: Update to HSE guidelines
-  if (version < 2) {
-    console.log('Applying HSE guideline defaults (v1 → v2)');
-    currentSettings.workInterval = DEFAULT_SETTINGS.workInterval;
-    currentSettings.breakDuration = DEFAULT_SETTINGS.breakDuration;
-  }
-
-  // Migration from v2 to v3: Add snooze duration
-  if (version < 3) {
-    console.log('Adding snooze duration default (v2 → v3)');
-    currentSettings.snoozeDuration = DEFAULT_SETTINGS.snoozeDuration;
-  }
-
-  // Migration from v3 to v4: Add automatic idle pause
-  if (version < 4) {
-    console.log('Adding automatic idle pause defaults (v3 → v4)');
-    currentSettings.autoPauseOnIdle = DEFAULT_SETTINGS.autoPauseOnIdle;
-    currentSettings.idlePauseThreshold = DEFAULT_SETTINGS.idlePauseThreshold;
-  }
-
-  // Migration from v4 to v5: Pause external media during breaks
-  if (version < 5) {
-    console.log('Adding break media control defaults (v4 → v5)');
-    currentSettings.pauseMediaOnBreak = DEFAULT_SETTINGS.pauseMediaOnBreak;
-    currentSettings.autoResumeMediaAfterBreak = DEFAULT_SETTINGS.autoResumeMediaAfterBreak;
-  }
-
-  // Update version to latest
-  currentSettings.version = DEFAULT_SETTINGS.version;
-
-  // Write directly so migration does not re-enter loadSettings through saveSettings.
-  fs.writeFileSync(settingsPath, JSON.stringify(currentSettings, null, 2), 'utf-8');
-
-  return currentSettings;
-}
-
-function saveSettings(settings) {
-  const merged = { ...loadSettings(), ...settings };
-  fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8');
-  return merged;
-}
+const settingsStore = createSettingsStore(settingsPath);
+const loadSettings = () => settingsStore.load();
+const saveSettings = settings => settingsStore.save(settings);
 
 // ---------------------------------------------------------------------------
 // Path helpers
@@ -170,9 +84,8 @@ let isPaused = false;
 let pauseReason = null; // null | 'manual' | 'idle'
 let idlePauseStartedAt = null;
 let audioWindow = null;  // persistent hidden window for sound playback
-let mediaBreakGeneration = 0;
-let activeMediaPausePromise = Promise.resolve([]);
 const mediaController = createMediaController();
+const breakMediaManager = createBreakMediaManager(mediaController);
 
 // ---------------------------------------------------------------------------
 // Window factories
@@ -313,7 +226,7 @@ function startBreak() {
   isBreakActive = true;
   breakSecondsRemaining = settings.breakDuration;
   breakSecondsTotal = settings.breakDuration;
-  pauseMediaForBreak(settings);
+  breakMediaManager.start(settings);
 
   // Send break-start to settings window
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -340,7 +253,7 @@ function endBreak() {
   const settings = loadSettings();
   isBreakActive = false;
   closeOverlayWindows();
-  finishMediaForBreak(settings);
+  breakMediaManager.finish(settings);
 
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     try { settingsWindow.webContents.send('break-end'); } catch (_) { }
@@ -374,38 +287,6 @@ function resetTimer() {
   startTimer();
   updateTrayMenu();
   broadcastTimerStatus();
-}
-
-function pauseMediaForBreak(settings) {
-  const generation = ++mediaBreakGeneration;
-  activeMediaPausePromise = settings.pauseMediaOnBreak
-    ? mediaController.pausePlaying()
-    : Promise.resolve([]);
-
-  activeMediaPausePromise.then((sessions) => {
-    if (isBreakActive && mediaBreakGeneration === generation && sessions.length > 0) {
-      console.log(`Cat Gatekeeper: paused ${sessions.length} media session(s)`);
-    }
-  });
-}
-
-function finishMediaForBreak(settings) {
-  const generation = mediaBreakGeneration;
-  const pausePromise = activeMediaPausePromise;
-  mediaBreakGeneration++;
-  activeMediaPausePromise = Promise.resolve([]);
-
-  if (!settings.pauseMediaOnBreak || !settings.autoResumeMediaAfterBreak) {
-    return Promise.resolve();
-  }
-
-  return pausePromise.then((sessions) => {
-    // Never resume old media into a later break or after another lifecycle change.
-    if (!isBreakActive && mediaBreakGeneration === generation + 1) {
-      return mediaController.resume(sessions);
-    }
-    return undefined;
-  });
 }
 
 function ensureAudioWindow() {
@@ -718,7 +599,7 @@ app.on('before-quit', (event) => {
     const settings = loadSettings();
     isBreakActive = false;
     closeOverlayWindows();
-    finishMediaForBreak(settings).finally(() => {
+    breakMediaManager.finish(settings).finally(() => {
       isCompletingQuit = true;
       app.quit();
     });

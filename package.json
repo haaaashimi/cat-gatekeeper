@@ -47,8 +47,10 @@
     },
     "files": [
       "main.js",
+      "break-media-manager.js",
       "media-controller.js",
       "preload.js",
+      "settings-store.js",
       "scripts/windows-media-control.ps1",
       "src/**/*",
       "!src/assets/cat.mp4"

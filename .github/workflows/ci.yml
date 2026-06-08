@@ -18,8 +18,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Build and verify bundled macOS helper
+        if: matrix.os == 'macos-latest'
+        run: |
+          npm run build:mac-helper
+          npm run verify:mac-helper
+
+      - name: Validate Windows media helper syntax
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "scripts/windows-media-control.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) > $null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
   build:
     name: Build (${{ matrix.os }})
+    needs: test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30  # Prevent runaway workflows
     
@@ -59,14 +108,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:win
+
+      - name: Verify packaged macOS app
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          APP_PATH="$(find dist -maxdepth 2 -type d -name 'Cat Gatekeeper.app' -print -quit)"
+          test -n "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          test -x "$APP_PATH/Contents/Resources/bin/nowplaying-cli/nowplaying-cli"
+          test -f "$APP_PATH/Contents/Resources/licenses/nowplaying-cli/LICENSE"
+          test -f "$APP_PATH/Contents/Resources/licenses/nowplaying-cli/source/nowplaying-cli-8c8c1fa.tar.gz"
       
       - name: Verify build output
         shell: bash  # Ensure cross-platform compatibility
         run: |
           if [ -d "dist" ] && [ "$(ls -A dist/)" ]; then
-            echo "✅ Build successful - artifacts created"
+            echo "Build successful - artifacts created"
             ls -lh dist/
           else
-            echo "❌ Build failed - no artifacts found"
+            echo "Build failed - no artifacts found"
             exit 1
           fi

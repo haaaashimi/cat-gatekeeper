@@ -10,8 +10,30 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run test suite
+        run: npm test
+
   release:
     name: Build (${{ matrix.os }})
+    needs: test
     runs-on: ${{ matrix.os }}
     
     strategy:
@@ -62,6 +84,17 @@ jobs:
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify packaged macOS app
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          APP_PATH="$(find dist -maxdepth 2 -type d -name 'Cat Gatekeeper.app' -print -quit)"
+          test -n "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          test -x "$APP_PATH/Contents/Resources/bin/nowplaying-cli/nowplaying-cli"
+          test -f "$APP_PATH/Contents/Resources/licenses/nowplaying-cli/LICENSE"
+          test -f "$APP_PATH/Contents/Resources/licenses/nowplaying-cli/source/nowplaying-cli-8c8c1fa.tar.gz"
       
       - name: Upload macOS artifacts
         if: matrix.os == 'macos-latest'
