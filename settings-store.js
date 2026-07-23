@@ -1,10 +1,11 @@
 const fs = require('fs');
 
 const DEFAULT_SETTINGS = {
-  version: 5,
-  workInterval: 50,
+  version: 6,
+  workInterval: 30,
   breakDuration: 300,
   snoozeDuration: 300,
+  maxSnoozeCount: 2,
   autoPauseOnIdle: true,
   idlePauseThreshold: 180,
   pauseMediaOnBreak: true,
@@ -42,6 +43,14 @@ function createSettingsStore(settingsPath, environment = process.env, logger = c
       logger.log('Adding break media control defaults (v4 → v5)');
       currentSettings.pauseMediaOnBreak = DEFAULT_SETTINGS.pauseMediaOnBreak;
       currentSettings.autoResumeMediaAfterBreak = DEFAULT_SETTINGS.autoResumeMediaAfterBreak;
+    }
+    if (version < 6) {
+      logger.log('Adding snooze limit and 30-min default (v5 → v6)');
+      currentSettings.maxSnoozeCount = DEFAULT_SETTINGS.maxSnoozeCount;
+      // Existing users keep their workInterval; only new installs get 30 min
+      if (!oldData.workInterval || oldData.workInterval === 50) {
+        currentSettings.workInterval = DEFAULT_SETTINGS.workInterval;
+      }
     }
 
     currentSettings.version = DEFAULT_SETTINGS.version;
