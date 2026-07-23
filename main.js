@@ -414,6 +414,18 @@ function updateTrayMenu() {
       label: 'Settings',
       click: () => createSettingsWindow()
     },
+    {
+      label: 'Start on Startup',
+      type: 'checkbox',
+      checked: loadSettings().startOnStartup,
+      click: (menuItem) => {
+        const settings = loadSettings();
+        settings.startOnStartup = menuItem.checked;
+        saveSettings(settings);
+        app.setLoginItemSettings({ openAtLogin: menuItem.checked });
+        updateTrayMenu();
+      }
+    },
     { type: 'separator' },
     {
       label: 'Quit',
@@ -519,6 +531,8 @@ function setupIPC() {
 
   ipcMain.handle('save-settings', (_event, newSettings) => {
     const saved = saveSettings(newSettings);
+    // Apply login item settings
+    app.setLoginItemSettings({ openAtLogin: saved.startOnStartup });
     // Restart timer with new interval
     if (!isBreakActive) {
       startTimer();
@@ -609,6 +623,11 @@ if (!gotTheLock) {
 
 app.whenReady().then(() => {
   setupIPC();
+
+  // Apply launch-on-startup setting from persisted settings
+  const settings = loadSettings();
+  app.setLoginItemSettings({ openAtLogin: settings.startOnStartup });
+
   startTimer();
   createTray();
 

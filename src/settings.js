@@ -34,6 +34,7 @@
   const maxSnoozeCountInput = document.getElementById('maxSnoozeCount');
   const maxSnoozeCountValue = document.getElementById('maxSnoozeCountValue');
   const maxSnoozeWarning = document.getElementById('maxSnoozeWarning');
+  const startOnStartupInput = document.getElementById('startOnStartup');
 
   let currentSettings = {};
   let selectedVideoPath = null;
@@ -70,6 +71,7 @@
 
       soundEnabledInput.checked = settings.soundEnabled;
       multiMonitorInput.checked = settings.multiMonitor;
+      startOnStartupInput.checked = settings.startOnStartup;
 
       maxSnoozeCountInput.value = settings.maxSnoozeCount || 2;
       maxSnoozeCountValue.textContent = settings.maxSnoozeCount || 2;
@@ -118,6 +120,7 @@
     const currentChromaKeyEnabled = chromaKeyEnabledInput.checked;
     const currentChromaKeyColor = chromaKeyColorInput.value.toUpperCase();
     const currentMaxSnoozeCount = parseInt(maxSnoozeCountInput.value, 10);
+    const currentStartOnStartup = startOnStartupInput.checked;
 
     hasChanges = (
       currentWorkInterval !== currentSettings.workInterval ||
@@ -132,7 +135,8 @@
       currentMultiMonitor !== currentSettings.multiMonitor ||
       currentVideoPath !== (currentSettings.videoPath || '') ||
       currentChromaKeyEnabled !== (currentSettings.chromaKeyEnabled !== false) ||
-      currentChromaKeyColor !== (currentSettings.chromaKeyColor || '#00FF00').toUpperCase()
+      currentChromaKeyColor !== (currentSettings.chromaKeyColor || '#00FF00').toUpperCase() ||
+      currentStartOnStartup !== (currentSettings.startOnStartup === true)
     );
 
     saveBtn.disabled = !hasChanges;
@@ -157,7 +161,8 @@
       multiMonitor: multiMonitorInput.checked,
       videoPath: selectedVideoPath || '',
       chromaKeyEnabled: chromaKeyEnabledInput.checked,
-      chromaKeyColor: chromaKeyColorInput.value.toUpperCase()
+      chromaKeyColor: chromaKeyColorInput.value.toUpperCase(),
+      startOnStartup: startOnStartupInput.checked
     };
 
     try {
@@ -290,9 +295,10 @@
       }
     });
 
-    // Toggle inputs (sound, multi-monitor, chroma key)
+    // Toggle inputs (sound, multi-monitor, chroma key, startup)
     soundEnabledInput.addEventListener('change', checkForChanges);
     multiMonitorInput.addEventListener('change', checkForChanges);
+    startOnStartupInput.addEventListener('change', checkForChanges);
     chromaKeyEnabledInput.addEventListener('change', () => {
       const enabled = chromaKeyEnabledInput.checked;
       chromaKeyColorRow.style.opacity = enabled ? '1' : '0.35';

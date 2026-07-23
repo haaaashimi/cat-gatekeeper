@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 const DEFAULT_SETTINGS = {
-  version: 6,
+  version: 7,
   workInterval: 30,
   breakDuration: 300,
   snoozeDuration: 300,
@@ -14,7 +14,8 @@ const DEFAULT_SETTINGS = {
   multiMonitor: true,
   videoPath: '',
   chromaKeyEnabled: false,
-  chromaKeyColor: '#00FF00'
+  chromaKeyColor: '#00FF00',
+  startOnStartup: false
 };
 
 function createSettingsStore(settingsPath, environment = process.env, logger = console) {
@@ -51,6 +52,11 @@ function createSettingsStore(settingsPath, environment = process.env, logger = c
       if (!oldData.workInterval || oldData.workInterval === 50) {
         currentSettings.workInterval = DEFAULT_SETTINGS.workInterval;
       }
+    }
+
+    if (version < 7) {
+      logger.log('Adding start on startup default (v6 → v7)');
+      currentSettings.startOnStartup = DEFAULT_SETTINGS.startOnStartup;
     }
 
     currentSettings.version = DEFAULT_SETTINGS.version;
