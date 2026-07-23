@@ -196,6 +196,12 @@
     cleanupTimer = window.catAPI.onTimerTick((data) => {
       if (data.isBreakActive) {
         updateDisplay(data);
+
+        // Disable snooze button if snooze limit reached
+        if (data.snoozeCount >= data.maxSnoozeCount) {
+          snoozeBtn.disabled = true;
+          snoozeBtn.textContent = 'No snoozes left';
+        }
       }
     });
   }
@@ -242,6 +248,11 @@
     window.catAPI.getTimerStatus().then((data) => {
       if (data.isBreakActive) {
         updateDisplay(data);
+        // Disable snooze button immediately if limit already reached
+        if (data.snoozeCount >= data.maxSnoozeCount) {
+          snoozeBtn.disabled = true;
+          snoozeBtn.textContent = 'No snoozes left';
+        }
       }
     }).catch(() => { });
   }

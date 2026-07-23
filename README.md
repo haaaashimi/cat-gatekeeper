@@ -10,7 +10,7 @@ When your work interval is up, a cat slides in from the side of your screen and 
 
 - **Cat overlay** — playful full-screen break reminder with animated cat
 - **Two-video lifecycle** — active cat slides in, then transitions to sleeping cat
-- **HSE-compliant defaults** — 50 min work / 5 min break intervals
+- **HSE-compliant defaults** — 30 min work / 5 min break intervals
 - **Customizable** — adjust work/break intervals to your preference
 - **System tray** — runs quietly in background with pause/resume controls
 - **Multi-monitor** — works across all your displays
@@ -28,7 +28,7 @@ npm install
 npm start
 ```
 
-The app starts in your system tray. The cat will appear after 50 minutes (default) for a 5-minute break.
+The app starts in your system tray. The cat will appear after 30 minutes (default) for a 5-minute break.
 
 > The app ships with real cat videos (`neko1.webm`, `neko2.webm`) and all required assets in `src/assets/`. No additional setup needed.
 
@@ -90,7 +90,7 @@ For most users, we recommend downloading the latest release:
 
 | Command | Description |
 |---------|-------------|
-| `npm start` | Launch the app (50 min interval) |
+| `npm start` | Launch the app (30 min interval) |
 | `npm run start:dev` | Launch with 1 min interval for testing |
 | `npm run pack` | Package app into a directory (no installer) |
 | `npm run dist` | Build installers for all platforms |
@@ -173,7 +173,7 @@ cat-gatekeeper/
 
 | Setting | Default | Range |
 |---------|---------|-------|
-| Work interval | 50 min | 5-120 min |
+| Work interval | 30 min | 5-120 min |
 | Break duration | 5 min (300 sec) | 1-10 min (60-600 sec) |
 | Snooze duration | 5 min (300 sec) | configurable |
 | Sound effect | disabled | on/off |
@@ -268,6 +268,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 - **[ぞくぞく](https://x.com/konekone2026)** — The original creator of the [Cat Gatekeeper Chrome extension](https://chromewebstore.google.com/detail/cat-gatekeeper/elbikiflgfhjdjmficnigpeegjbhdidh), built to limit SNS usage. This Electron desktop app is inspired by their brilliant idea, adapted to follow HSE screen-break guidelines for desk workers.
 - HSE (Health and Safety Executive) for screen break recommendations
+- **[Keith Diaz — What sitting all day does to your brain and body](https://www.ted.com/talks/keith_diaz_what_sitting_all_day_does_to_your_brain_and_body)** — TED Talk (April 2026) that informed the 30-minute work interval default
 - All the cats who inspired this project 🐱
 
 ## 📬 Contact & Support

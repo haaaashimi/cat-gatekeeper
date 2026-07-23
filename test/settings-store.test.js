@@ -16,7 +16,9 @@ test('new installs receive media control defaults', (t) => {
   const settings = store.load();
   assert.equal(settings.pauseMediaOnBreak, true);
   assert.equal(settings.autoResumeMediaAfterBreak, false);
-  assert.equal(settings.version, 5);
+  assert.equal(settings.maxSnoozeCount, 2);
+  assert.equal(settings.workInterval, 30);
+  assert.equal(settings.version, 6);
 });
 
 test('v4 settings migrate and persist media control defaults', (t) => {
@@ -30,12 +32,14 @@ test('v4 settings migrate and persist media control defaults', (t) => {
   const store = createSettingsStore(settingsPath, {}, { log: message => logs.push(message) });
 
   const settings = store.load();
-  assert.equal(settings.version, 5);
+  assert.equal(settings.version, 6);
   assert.equal(settings.workInterval, 25);
   assert.equal(settings.pauseMediaOnBreak, true);
   assert.equal(settings.autoResumeMediaAfterBreak, false);
+  assert.equal(settings.maxSnoozeCount, 2);
   assert.deepEqual(JSON.parse(fs.readFileSync(settingsPath, 'utf8')), settings);
   assert.ok(logs.some(message => message.includes('v4 → v5')));
+  assert.ok(logs.some(message => message.includes('v5 → v6')));
 });
 
 test('saving media settings preserves unrelated settings', (t) => {

@@ -84,6 +84,9 @@ let isPaused = false;
 let pauseReason = null; // null | 'manual' | 'idle'
 let idlePauseStartedAt = null;
 let audioWindow = null;  // persistent hidden window for sound playback
+let previousFocusedWindow = null;  // window to restore focus to after break
+let snoozeCount = 0;  // tracks snoozes in current break cycle
+let suspendStartedAt = null;  // timestamp when system suspended
 const mediaController = createMediaController();
 const breakMediaManager = createBreakMediaManager(mediaController);
 
@@ -224,9 +227,13 @@ function stopTimer() {
 function startBreak() {
   const settings = loadSettings();
   isBreakActive = true;
+  snoozeCount = 0;
   breakSecondsRemaining = settings.breakDuration;
   breakSecondsTotal = settings.breakDuration;
   breakMediaManager.start(settings);
+
+  // Capture the currently focused window so we can restore focus after the break
+  previousFocusedWindow = BrowserWindow.getFocusedWindow();
 
   // Send break-start to settings window
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -262,12 +269,20 @@ function endBreak() {
   workSecondsRemaining = settings.workInterval * 60;
   broadcastTimerStatus();
 
+  // Restore focus to the window that was focused before the break
+  if (previousFocusedWindow && !previousFocusedWindow.isDestroyed()) {
+    previousFocusedWindow.focus();
+  }
+  previousFocusedWindow = null;
+
   // Update tray/dock menu after break ends
   updateTrayMenu();
 }
 
 function snoozeBreak() {
   const settings = loadSettings();
+  if (snoozeCount >= (settings.maxSnoozeCount || 2)) return;
+  snoozeCount++;
   endBreak();
   workSecondsRemaining = settings.snoozeDuration;
 }
@@ -283,6 +298,7 @@ function resetTimer() {
   isPaused = false;
   pauseReason = null;
   idlePauseStartedAt = null;
+  snoozeCount = 0;
   closeOverlayWindows();
   startTimer();
   updateTrayMenu();
@@ -315,13 +331,16 @@ function playSound(filePath) {
 }
 
 function broadcastTimerStatus() {
+  const settings = loadSettings();
   const data = {
     workSecondsRemaining: Math.max(0, workSecondsRemaining),
     breakSecondsRemaining: Math.max(0, breakSecondsRemaining),
     breakSecondsTotal: breakSecondsTotal,
     isBreakActive,
     isPaused,
-    pauseReason
+    pauseReason,
+    snoozeCount,
+    maxSnoozeCount: settings.maxSnoozeCount || 2
   };
 
   for (const win of overlayWindows) {
@@ -379,7 +398,16 @@ function updateTrayMenu() {
     {
       label: 'Reset Timer',
       click: () => {
-        resetTimer();
+        const result = dialog.showMessageBoxSync({
+          type: 'question',
+          buttons: ['Cancel', 'Reset'],
+          defaultId: 0,
+          title: 'Reset Timer',
+          message: 'Are you sure you want to reset the timer?'
+        });
+        if (result === 1) {
+          resetTimer();
+        }
       }
     },
     {
@@ -508,7 +536,9 @@ function setupIPC() {
     breakSecondsTotal,
     isBreakActive,
     isPaused,
-    pauseReason
+    pauseReason,
+    snoozeCount,
+    maxSnoozeCount: loadSettings().maxSnoozeCount || 2
   }));
 
   ipcMain.on('dismiss-break', () => {
@@ -584,6 +614,30 @@ app.whenReady().then(() => {
 
   // Show settings on first launch
   createSettingsWindow();
+
+  // Handle system sleep/suspend (lid close, sleep mode)
+  powerMonitor.on('suspend', () => {
+    suspendStartedAt = Date.now();
+  });
+
+  powerMonitor.on('resume', () => {
+    if (suspendStartedAt === null) return;
+    const sleepDurationMs = Date.now() - suspendStartedAt;
+    const sleepDurationSec = Math.floor(sleepDurationMs / 1000);
+    suspendStartedAt = null;
+    const settings = loadSettings();
+
+    if (isBreakActive) {
+      // If a break was active during sleep, end it
+      endBreak();
+    }
+
+    // If the system was asleep for longer than the break/away duration, reset the work timer
+    if (sleepDurationSec >= settings.breakDuration) {
+      workSecondsRemaining = settings.workInterval * 60;
+      broadcastTimerStatus();
+    }
+  });
 });
 
 app.on('window-all-closed', () => {

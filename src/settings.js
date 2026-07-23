@@ -31,6 +31,9 @@
   const chromaKeyColorInput = document.getElementById('chromaKeyColor');
   const chromaKeyColorValue = document.getElementById('chromaKeyColorValue');
   const chromaKeyColorRow = document.getElementById('chromaKeyColorRow');
+  const maxSnoozeCountInput = document.getElementById('maxSnoozeCount');
+  const maxSnoozeCountValue = document.getElementById('maxSnoozeCountValue');
+  const maxSnoozeWarning = document.getElementById('maxSnoozeWarning');
 
   let currentSettings = {};
   let selectedVideoPath = null;
@@ -68,6 +71,10 @@
       soundEnabledInput.checked = settings.soundEnabled;
       multiMonitorInput.checked = settings.multiMonitor;
 
+      maxSnoozeCountInput.value = settings.maxSnoozeCount || 2;
+      maxSnoozeCountValue.textContent = settings.maxSnoozeCount || 2;
+      updateSnoozeWarning();
+
       chromaKeyEnabledInput.checked = settings.chromaKeyEnabled !== false;
       const keyColor = settings.chromaKeyColor || '#00FF00';
       chromaKeyColorInput.value = keyColor.toLowerCase();
@@ -82,6 +89,16 @@
     } catch (_) {
       // Settings might not be ready yet
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Snooze warning logic
+  // -----------------------------------------------------------------------
+  function updateSnoozeWarning() {
+    const workInterval = parseInt(workIntervalInput.value, 10);
+    const maxCount = parseInt(maxSnoozeCountInput.value, 10);
+    const recommendedMax = Math.min(Math.floor(workInterval / 15), 6);
+    maxSnoozeWarning.style.display = maxCount > recommendedMax ? 'block' : 'none';
   }
 
   // -----------------------------------------------------------------------
@@ -100,11 +117,13 @@
     const currentVideoPath = selectedVideoPath || '';
     const currentChromaKeyEnabled = chromaKeyEnabledInput.checked;
     const currentChromaKeyColor = chromaKeyColorInput.value.toUpperCase();
+    const currentMaxSnoozeCount = parseInt(maxSnoozeCountInput.value, 10);
 
     hasChanges = (
       currentWorkInterval !== currentSettings.workInterval ||
       currentBreakDuration !== currentSettings.breakDuration ||
       currentSnoozeDuration !== (currentSettings.snoozeDuration || 300) ||
+      currentMaxSnoozeCount !== (currentSettings.maxSnoozeCount || 2) ||
       currentAutoPauseOnIdle !== (currentSettings.autoPauseOnIdle !== false) ||
       currentIdlePauseThreshold !== (currentSettings.idlePauseThreshold || 300) ||
       currentPauseMediaOnBreak !== (currentSettings.pauseMediaOnBreak !== false) ||
@@ -129,6 +148,7 @@
       workInterval: parseInt(workIntervalInput.value, 10),
       breakDuration: parseInt(breakDurationInput.value, 10),
       snoozeDuration: parseInt(snoozeDurationInput.value, 10),
+      maxSnoozeCount: parseInt(maxSnoozeCountInput.value, 10),
       autoPauseOnIdle: autoPauseOnIdleInput.checked,
       idlePauseThreshold: parseInt(idlePauseThresholdInput.value, 10),
       pauseMediaOnBreak: pauseMediaOnBreakInput.checked,
@@ -203,6 +223,7 @@
     // Range live updates
     workIntervalInput.addEventListener('input', () => {
       workIntervalValue.textContent = `${workIntervalInput.value} min`;
+      updateSnoozeWarning();
       checkForChanges();
     });
 
@@ -213,6 +234,12 @@
 
     snoozeDurationInput.addEventListener('input', () => {
       snoozeDurationValue.textContent = `${Math.round(snoozeDurationInput.value / 60)} min`;
+      checkForChanges();
+    });
+
+    maxSnoozeCountInput.addEventListener('input', () => {
+      maxSnoozeCountValue.textContent = maxSnoozeCountInput.value;
+      updateSnoozeWarning();
       checkForChanges();
     });
 
@@ -258,7 +285,9 @@
 
     // Reset Timer
     resetTimerBtn.addEventListener('click', () => {
-      window.catAPI.resetTimer();
+      if (confirm('Are you sure you want to reset the timer?')) {
+        window.catAPI.resetTimer();
+      }
     });
 
     // Toggle inputs (sound, multi-monitor, chroma key)
