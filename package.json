@@ -57,6 +57,7 @@
       "media-controller.js",
       "preload.js",
       "settings-store.js",
+      "timer-policy.js",
       "scripts/windows-media-control.ps1",
       "src/**/*",
       "!src/assets/cat.mp4"
@@ -81,6 +82,9 @@
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "identity": null,
+      "extendInfo": {
+        "LSUIElement": true
+      },
       "extraResources": [
         {
           "from": "vendor/nowplaying-cli/darwin-${arch}",

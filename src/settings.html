@@ -45,7 +45,7 @@
         <span class="label-desc">Minutes for your break (HSE: 5-10 min per hour)</span>
       </div>
       <div class="setting-control">
-        <input type="range" id="breakDuration" min="60" max="600" value="300" step="30">
+        <input type="range" id="breakDuration" min="60" max="600" value="300" step="60">
         <span class="range-value" id="breakDurationValue">5 min</span>
       </div>
     </div>
@@ -163,20 +163,6 @@
       </div>
     </div>
 
-    <!-- Sound -->
-    <div class="setting-row">
-      <div class="setting-label">
-        <span class="label-text">Sound Effect</span>
-        <span class="label-desc">Play a meow when break starts</span>
-      </div>
-      <div class="setting-control">
-        <label class="toggle">
-          <input type="checkbox" id="soundEnabled" checked>
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </div>
-
     <!-- Multi-monitor -->
     <div class="setting-row">
       <div class="setting-label">
@@ -203,36 +189,58 @@
       </div>
     </div>
 
-    <!-- Chroma Key -->
-    <div class="setting-group-header">Chroma Key (Green Screen) <span class="badge-wip">WIP</span></div>
-    <p class="setting-group-desc">Remove the background from your cat video so the cat appears to walk on your screen.
-      Works best with green screen videos.</p>
+    <!-- Experimental (not implemented yet) -->
+    <details class="wip-accordion">
+      <summary>
+        <span class="wip-accordion-title">Experimental <span class="badge-wip">WIP</span></span>
+        <span class="wip-accordion-chevron">&#9662;</span>
+      </summary>
+      <div class="wip-accordion-body">
+        <p class="setting-group-desc">These features are not implemented yet. They are disabled until they ship in a
+          future update.</p>
 
-    <div class="setting-row">
-      <div class="setting-label">
-        <span class="label-text">Chroma Key</span>
-        <span class="label-desc">Remove video background</span>
-      </div>
-      <div class="setting-control">
-        <label class="toggle">
-          <input type="checkbox" id="chromaKeyEnabled" checked>
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </div>
+        <!-- Sound -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">Sound Effect</span>
+            <span class="label-desc">Play a meow when break starts</span>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" id="soundEnabled" disabled>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
 
-    <div class="setting-row" id="chromaKeyColorRow">
-      <div class="setting-label">
-        <span class="label-text">Key Color</span>
-        <span class="label-desc">Background color to remove</span>
-      </div>
-      <div class="setting-control">
-        <div class="color-picker-wrapper">
-          <input type="color" id="chromaKeyColor" value="#00ff00">
-          <span class="color-value" id="chromaKeyColorValue">#00FF00</span>
+        <!-- Chroma Key -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">Chroma Key (Green Screen)</span>
+            <span class="label-desc">Remove the background from your custom cat video</span>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" id="chromaKeyEnabled" disabled>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-row" id="chromaKeyColorRow">
+          <div class="setting-label">
+            <span class="label-text">Key Color</span>
+            <span class="label-desc">Background color to remove</span>
+          </div>
+          <div class="setting-control">
+            <div class="color-picker-wrapper">
+              <input type="color" id="chromaKeyColor" value="#00ff00" disabled>
+              <span class="color-value" id="chromaKeyColorValue">#00FF00</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </details>
 
     <!-- Save -->
     <div class="footer">

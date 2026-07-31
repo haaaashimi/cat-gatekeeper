@@ -14,6 +14,7 @@ const fs = require('fs');
 const { createBreakMediaManager } = require('./break-media-manager');
 const { createMediaController } = require('./media-controller');
 const { createSettingsStore } = require('./settings-store');
+const { evaluateReturn } = require('./timer-policy');
 
 // ---------------------------------------------------------------------------
 // Settings persistence (manual JSON store to avoid ESM import issues with electron-store in CJS)
@@ -82,11 +83,12 @@ let breakSecondsTotal = 0;
 let isBreakActive = false;
 let isPaused = false;
 let pauseReason = null; // null | 'manual' | 'idle'
-let idlePauseStartedAt = null;
 let audioWindow = null;  // persistent hidden window for sound playback
 let previousFocusedWindow = null;  // window to restore focus to after break
 let snoozeCount = 0;  // tracks snoozes in current break cycle
-let suspendStartedAt = null;  // timestamp when system suspended
+let lastTickAt = Date.now();  // wall-clock time of the last interval tick
+let lastActivityAt = Date.now();  // wall-clock time of the last real user input
+const SLEEP_GAP_THRESHOLD_SECONDS = 30;  // tick gap that implies the system slept
 const mediaController = createMediaController();
 const breakMediaManager = createBreakMediaManager(mediaController);
 
@@ -151,6 +153,8 @@ function createSettingsWindow() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.show();
     settingsWindow.focus();
+    // Accessory apps need an explicit activation to come frontmost
+    if (process.platform === 'darwin') app.focus({ steal: true });
     return;
   }
 
@@ -195,11 +199,31 @@ function startTimer() {
   isBreakActive = false;
   isPaused = false;
   pauseReason = null;
-  idlePauseStartedAt = null;
   broadcastTimerStatus();
 
+  lastTickAt = Date.now();
+  lastActivityAt = sampleLastActivity();
   timerInterval = setInterval(() => {
-    updateIdlePauseState();
+    const now = Date.now();
+    const gapSeconds = Math.floor((now - lastTickAt) / 1000);
+    lastTickAt = now;
+
+    // Snapshot before refreshing: at a return tick the fresh sample already
+    // reflects the new input, but reset decisions need the pre-return value
+    const previousActivityAt = lastActivityAt;
+    lastActivityAt = sampleLastActivity();
+
+    // Wake detection: setInterval cannot fire while the system sleeps, so a
+    // large gap between ticks means we just woke up. Works even when macOS
+    // skips powerMonitor's suspend/resume events on lid close.
+    if (gapSeconds >= SLEEP_GAP_THRESHOLD_SECONDS) {
+      const awaySeconds = Math.floor((now - previousActivityAt) / 1000);
+      applyReturnAction(gapSeconds, awaySeconds);
+      broadcastTimerStatus();
+      return;
+    }
+
+    updateIdlePauseState(previousActivityAt);
     if (isPaused) return;
 
     if (!isBreakActive) {
@@ -227,7 +251,6 @@ function stopTimer() {
 function startBreak() {
   const settings = loadSettings();
   isBreakActive = true;
-  snoozeCount = 0;
   breakSecondsRemaining = settings.breakDuration;
   breakSecondsTotal = settings.breakDuration;
   breakMediaManager.start(settings);
@@ -256,9 +279,14 @@ function startBreak() {
   }
 }
 
-function endBreak() {
+function endBreak(wasSnoozed = false) {
   const settings = loadSettings();
   isBreakActive = false;
+  // A snoozed break isn't over — keep the count so the limit accumulates
+  // across snoozes. Only a completed/dismissed break resets it.
+  if (!wasSnoozed) {
+    snoozeCount = 0;
+  }
   closeOverlayWindows();
   breakMediaManager.finish(settings);
 
@@ -269,9 +297,19 @@ function endBreak() {
   workSecondsRemaining = settings.workInterval * 60;
   broadcastTimerStatus();
 
-  // Restore focus to the window that was focused before the break
+  // Restore focus to whatever was focused before the break
   if (previousFocusedWindow && !previousFocusedWindow.isDestroyed()) {
+    // One of our own windows (e.g. Settings) had focus — restore it directly
     previousFocusedWindow.focus();
+  } else if (process.platform === 'darwin') {
+    // An external app had focus. Yield activation back to it by hiding the
+    // app — macOS re-activates the previously frontmost application.
+    const settingsWasVisible = settingsWindow && !settingsWindow.isDestroyed() && settingsWindow.isVisible();
+    app.hide();
+    // Keep the Settings window on screen without stealing focus back
+    if (settingsWasVisible) {
+      settingsWindow.showInactive();
+    }
   }
   previousFocusedWindow = null;
 
@@ -283,7 +321,7 @@ function snoozeBreak() {
   const settings = loadSettings();
   if (snoozeCount >= (settings.maxSnoozeCount || 2)) return;
   snoozeCount++;
-  endBreak();
+  endBreak(true);
   workSecondsRemaining = settings.snoozeDuration;
 }
 
@@ -297,7 +335,6 @@ function resetTimer() {
   isBreakActive = false;
   isPaused = false;
   pauseReason = null;
-  idlePauseStartedAt = null;
   snoozeCount = 0;
   closeOverlayWindows();
   startTimer();
@@ -340,7 +377,8 @@ function broadcastTimerStatus() {
     isPaused,
     pauseReason,
     snoozeCount,
-    maxSnoozeCount: settings.maxSnoozeCount || 2
+    maxSnoozeCount: settings.maxSnoozeCount || 2,
+    snoozeDuration: settings.snoozeDuration || 300
   };
 
   for (const win of overlayWindows) {
@@ -444,11 +482,6 @@ function updateTrayMenu() {
   });
 
   tray.setContextMenu(contextMenu);
-
-  // macOS: also set the dock menu (right-click on taskbar/dock icon)
-  if (process.platform === 'darwin') {
-    app.dock.setMenu(contextMenu);
-  }
 }
 
 function getTimeDisplay() {
@@ -478,12 +511,49 @@ function pauseTimer() {
 function resumeTimer() {
   isPaused = false;
   pauseReason = null;
-  idlePauseStartedAt = null;
   updateTrayMenu();
   broadcastTimerStatus();
 }
 
-function updateIdlePauseState() {
+// Timestamp of the user's last real input. Falls back to "active now" when
+// idle detection is unavailable, degrading the wake path to gap-only checks.
+function sampleLastActivity() {
+  try {
+    return Date.now() - powerMonitor.getSystemIdleTime() * 1000;
+  } catch (_) {
+    return Date.now();
+  }
+}
+
+// Applies the pure timer-policy decision when the user returns after time
+// away (system wake detected by tick gap, or first input after an idle pause)
+function applyReturnAction(gapSeconds, awaySeconds) {
+  const settings = loadSettings();
+  const decision = evaluateReturn({
+    gapSeconds,
+    awaySeconds,
+    isBreakActive,
+    breakSecondsRemaining,
+    breakDuration: settings.breakDuration
+  });
+
+  switch (decision.action) {
+    case 'endBreak':
+      // Break fully elapsed while away (endBreak resets the work interval)
+      endBreak();
+      break;
+    case 'creditBreak':
+      breakSecondsRemaining -= decision.creditSeconds;
+      broadcastTimerStatus();
+      break;
+    case 'resetWork':
+      workSecondsRemaining = settings.workInterval * 60;
+      broadcastTimerStatus();
+      break;
+  }
+}
+
+function updateIdlePauseState(previousActivityAt) {
   const settings = loadSettings();
 
   if (!settings.autoPauseOnIdle || isBreakActive) {
@@ -502,13 +572,10 @@ function updateIdlePauseState() {
 
   if (pauseReason === 'idle') {
     if (idleSeconds <= 1) {
-      const idlePauseSeconds = idlePauseStartedAt
-        ? Math.floor((Date.now() - idlePauseStartedAt) / 1000)
-        : 0;
-
-      if (idlePauseSeconds >= settings.breakDuration) {
-        workSecondsRemaining = settings.workInterval * 60;
-      }
+      // User returned — the away span runs from their last input before the
+      // pause, so idle and sleep time naturally combine into one measure
+      const awaySeconds = Math.floor((Date.now() - previousActivityAt) / 1000);
+      applyReturnAction(0, awaySeconds);
       resumeTimer();
     }
     return;
@@ -517,7 +584,6 @@ function updateIdlePauseState() {
   if (!isPaused && idleSeconds >= settings.idlePauseThreshold) {
     isPaused = true;
     pauseReason = 'idle';
-    idlePauseStartedAt = Date.now();
     updateTrayMenu();
     broadcastTimerStatus();
   }
@@ -544,16 +610,20 @@ function setupIPC() {
     return saved;
   });
 
-  ipcMain.handle('get-timer-status', () => ({
-    workSecondsRemaining: Math.max(0, workSecondsRemaining),
-    breakSecondsRemaining: Math.max(0, breakSecondsRemaining),
-    breakSecondsTotal,
-    isBreakActive,
-    isPaused,
-    pauseReason,
-    snoozeCount,
-    maxSnoozeCount: loadSettings().maxSnoozeCount || 2
-  }));
+  ipcMain.handle('get-timer-status', () => {
+    const settings = loadSettings();
+    return {
+      workSecondsRemaining: Math.max(0, workSecondsRemaining),
+      breakSecondsRemaining: Math.max(0, breakSecondsRemaining),
+      breakSecondsTotal,
+      isBreakActive,
+      isPaused,
+      pauseReason,
+      snoozeCount,
+      maxSnoozeCount: settings.maxSnoozeCount || 2,
+      snoozeDuration: settings.snoozeDuration || 300
+    };
+  });
 
   ipcMain.on('dismiss-break', () => {
     if (isBreakActive) {
@@ -615,6 +685,8 @@ if (!gotTheLock) {
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       settingsWindow.show();
       settingsWindow.focus();
+      // Accessory apps need an explicit activation to come frontmost
+      if (process.platform === 'darwin') app.focus({ steal: true });
     } else {
       createSettingsWindow();
     }
@@ -622,6 +694,9 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
+  // Run as an accessory app on macOS: no Dock icon, hidden from Cmd+Tab
+  if (process.platform === 'darwin') app.dock.hide();
+
   setupIPC();
 
   // Apply launch-on-startup setting from persisted settings
@@ -633,30 +708,6 @@ app.whenReady().then(() => {
 
   // Show settings on first launch
   createSettingsWindow();
-
-  // Handle system sleep/suspend (lid close, sleep mode)
-  powerMonitor.on('suspend', () => {
-    suspendStartedAt = Date.now();
-  });
-
-  powerMonitor.on('resume', () => {
-    if (suspendStartedAt === null) return;
-    const sleepDurationMs = Date.now() - suspendStartedAt;
-    const sleepDurationSec = Math.floor(sleepDurationMs / 1000);
-    suspendStartedAt = null;
-    const settings = loadSettings();
-
-    if (isBreakActive) {
-      // If a break was active during sleep, end it
-      endBreak();
-    }
-
-    // If the system was asleep for longer than the break/away duration, reset the work timer
-    if (sleepDurationSec >= settings.breakDuration) {
-      workSecondsRemaining = settings.workInterval * 60;
-      broadcastTimerStatus();
-    }
-  });
 });
 
 app.on('window-all-closed', () => {

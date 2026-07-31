@@ -179,7 +179,7 @@ body {
   transition: left 0.5s ease;
 }
 
-.btn:hover::before {
+.btn:hover:not(:disabled)::before {
   left: 100%;
 }
 
@@ -220,12 +220,20 @@ body {
   font-weight: 800;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: linear-gradient(135deg, rgba(230, 195, 160, 0.95) 0%, rgba(212, 163, 115, 0.9) 100%);
   border-color: rgba(230, 195, 160, 0.8);
   box-shadow: 0 6px 20px rgba(212, 163, 115, 0.5);
   transform: translateY(-2px);
   color: #1a1a1e;
+}
+
+.btn-secondary:disabled {
+  background: rgba(212, 163, 115, 0.2);
+  color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(212, 163, 115, 0.2);
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* ---- Fade-in ---- */
