@@ -30,7 +30,6 @@
   const chromaKeyEnabledInput = document.getElementById('chromaKeyEnabled');
   const chromaKeyColorInput = document.getElementById('chromaKeyColor');
   const chromaKeyColorValue = document.getElementById('chromaKeyColorValue');
-  const chromaKeyColorRow = document.getElementById('chromaKeyColorRow');
   const maxSnoozeCountInput = document.getElementById('maxSnoozeCount');
   const maxSnoozeCountValue = document.getElementById('maxSnoozeCountValue');
   const maxSnoozeWarning = document.getElementById('maxSnoozeWarning');
@@ -77,11 +76,11 @@
       maxSnoozeCountValue.textContent = settings.maxSnoozeCount || 2;
       updateSnoozeWarning();
 
+      // WIP controls (disabled in UI) — load values so they pass through on save
       chromaKeyEnabledInput.checked = settings.chromaKeyEnabled !== false;
       const keyColor = settings.chromaKeyColor || '#00FF00';
       chromaKeyColorInput.value = keyColor.toLowerCase();
       chromaKeyColorValue.textContent = keyColor.toUpperCase();
-      chromaKeyColorRow.style.opacity = settings.chromaKeyEnabled !== false ? '1' : '0.35';
 
       if (settings.videoPath) {
         videoFileName.textContent = settings.videoPath.split(/[/\\]/).pop();
@@ -99,8 +98,13 @@
   function updateSnoozeWarning() {
     const workInterval = parseInt(workIntervalInput.value, 10);
     const maxCount = parseInt(maxSnoozeCountInput.value, 10);
+    const snoozeMinutes = parseInt(snoozeDurationInput.value, 10) / 60;
     const recommendedMax = Math.min(Math.floor(workInterval / 15), 6);
-    maxSnoozeWarning.style.display = maxCount > recommendedMax ? 'block' : 'none';
+    // Warn when the snooze count exceeds the recommended max, or when the
+    // combined snooze time could defer a break past a full work interval
+    const exceedsCount = maxCount > recommendedMax;
+    const exceedsTime = maxCount * snoozeMinutes > workInterval;
+    maxSnoozeWarning.style.display = (exceedsCount || exceedsTime) ? 'block' : 'none';
   }
 
   // -----------------------------------------------------------------------
@@ -239,6 +243,7 @@
 
     snoozeDurationInput.addEventListener('input', () => {
       snoozeDurationValue.textContent = `${Math.round(snoozeDurationInput.value / 60)} min`;
+      updateSnoozeWarning();
       checkForChanges();
     });
 
@@ -295,21 +300,10 @@
       }
     });
 
-    // Toggle inputs (sound, multi-monitor, chroma key, startup)
-    soundEnabledInput.addEventListener('change', checkForChanges);
+    // Toggle inputs (multi-monitor, startup)
+    // Sound and chroma key inputs are WIP and disabled, so no listeners needed
     multiMonitorInput.addEventListener('change', checkForChanges);
     startOnStartupInput.addEventListener('change', checkForChanges);
-    chromaKeyEnabledInput.addEventListener('change', () => {
-      const enabled = chromaKeyEnabledInput.checked;
-      chromaKeyColorRow.style.opacity = enabled ? '1' : '0.35';
-      checkForChanges();
-    });
-
-    // Chroma key color picker live update
-    chromaKeyColorInput.addEventListener('input', () => {
-      chromaKeyColorValue.textContent = chromaKeyColorInput.value.toUpperCase();
-      checkForChanges();
-    });
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {

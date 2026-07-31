@@ -18,7 +18,7 @@ test('new installs receive media control defaults', (t) => {
   assert.equal(settings.autoResumeMediaAfterBreak, false);
   assert.equal(settings.maxSnoozeCount, 2);
   assert.equal(settings.workInterval, 30);
-  assert.equal(settings.version, 7);
+  assert.equal(settings.version, 8);
   assert.equal(settings.startOnStartup, false);
 });
 
@@ -33,7 +33,7 @@ test('v4 settings migrate and persist media control defaults', (t) => {
   const store = createSettingsStore(settingsPath, {}, { log: message => logs.push(message) });
 
   const settings = store.load();
-  assert.equal(settings.version, 7);
+  assert.equal(settings.version, 8);
   assert.equal(settings.startOnStartup, false);
   assert.equal(settings.workInterval, 25);
   assert.equal(settings.pauseMediaOnBreak, true);
@@ -43,6 +43,55 @@ test('v4 settings migrate and persist media control defaults', (t) => {
   assert.ok(logs.some(message => message.includes('v4 → v5')));
   assert.ok(logs.some(message => message.includes('v5 → v6')));
   assert.ok(logs.some(message => message.includes('v6 → v7')));
+});
+
+test('v7 settings snap half-minute durations to whole minutes', (t) => {
+  const settingsPath = tempSettingsPath(t);
+  fs.writeFileSync(settingsPath, JSON.stringify({
+    version: 7,
+    breakDuration: 270,
+    snoozeDuration: 90
+  }));
+  const logs = [];
+  const store = createSettingsStore(settingsPath, {}, { log: message => logs.push(message) });
+
+  const settings = store.load();
+  assert.equal(settings.version, 8);
+  assert.equal(settings.breakDuration, 300);
+  assert.equal(settings.snoozeDuration, 120);
+  assert.ok(logs.some(message => message.includes('v7 → v8')));
+
+  const persisted = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  assert.equal(persisted.breakDuration, 300);
+  assert.equal(persisted.snoozeDuration, 120);
+});
+
+test('v7 settings with whole-minute durations are preserved', (t) => {
+  const settingsPath = tempSettingsPath(t);
+  fs.writeFileSync(settingsPath, JSON.stringify({
+    version: 7,
+    breakDuration: 420,
+    snoozeDuration: 180
+  }));
+  const store = createSettingsStore(settingsPath, {});
+
+  const settings = store.load();
+  assert.equal(settings.breakDuration, 420);
+  assert.equal(settings.snoozeDuration, 180);
+});
+
+test('v7 settings with invalid or sub-minute durations fall back safely', (t) => {
+  const settingsPath = tempSettingsPath(t);
+  fs.writeFileSync(settingsPath, JSON.stringify({
+    version: 7,
+    breakDuration: 30,
+    snoozeDuration: 'abc'
+  }));
+  const store = createSettingsStore(settingsPath, {});
+
+  const settings = store.load();
+  assert.equal(settings.breakDuration, 60);
+  assert.equal(settings.snoozeDuration, DEFAULT_SETTINGS.snoozeDuration);
 });
 
 test('saving media settings preserves unrelated settings', (t) => {

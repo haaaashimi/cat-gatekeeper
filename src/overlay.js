@@ -190,18 +190,32 @@
   }
 
   // -----------------------------------------------------------------------
+  // Snooze button state
+  // -----------------------------------------------------------------------
+  function updateSnoozeButton(data) {
+    const maxCount = data.maxSnoozeCount || 2;
+    const snoozeMinutes = Math.round((data.snoozeDuration || 300) / 60);
+
+    if (data.snoozeCount >= maxCount) {
+      snoozeBtn.disabled = true;
+      snoozeBtn.textContent = 'No snoozes left';
+      snoozeBtn.title = `Snooze limit reached (${maxCount} per break). Adjustable in Settings.`;
+    } else {
+      snoozeBtn.disabled = false;
+      snoozeBtn.textContent = `Snooze ${snoozeMinutes} min`;
+      const remaining = maxCount - data.snoozeCount;
+      snoozeBtn.title = `${remaining} snooze${remaining === 1 ? '' : 's'} remaining`;
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // IPC listeners
   // -----------------------------------------------------------------------
   function setupListeners() {
     cleanupTimer = window.catAPI.onTimerTick((data) => {
       if (data.isBreakActive) {
         updateDisplay(data);
-
-        // Disable snooze button if snooze limit reached
-        if (data.snoozeCount >= data.maxSnoozeCount) {
-          snoozeBtn.disabled = true;
-          snoozeBtn.textContent = 'No snoozes left';
-        }
+        updateSnoozeButton(data);
       }
     });
   }
@@ -248,11 +262,8 @@
     window.catAPI.getTimerStatus().then((data) => {
       if (data.isBreakActive) {
         updateDisplay(data);
-        // Disable snooze button immediately if limit already reached
-        if (data.snoozeCount >= data.maxSnoozeCount) {
-          snoozeBtn.disabled = true;
-          snoozeBtn.textContent = 'No snoozes left';
-        }
+        // Apply snooze button state immediately (limit may already be reached)
+        updateSnoozeButton(data);
       }
     }).catch(() => { });
   }

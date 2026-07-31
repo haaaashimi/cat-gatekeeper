@@ -1,8 +1,9 @@
 # Test Suite
 
 Cat Gatekeeper uses Node.js's built-in test runner. The suite focuses on the
-break media-control feature, its settings, and the packaging contracts required
-to make platform helpers work after installation.
+break media-control feature, its settings, the away/sleep timer reset policy,
+and the packaging contracts required to make platform helpers work after
+installation.
 
 ## Run Tests
 
@@ -22,7 +23,7 @@ Run a test by name:
 node --test --test-name-pattern="stale pause result"
 ```
 
-The full suite currently contains 22 tests.
+The full suite currently contains 32 tests.
 
 ## Test Files
 
@@ -59,6 +60,27 @@ Coverage:
 
 The tests never invoke real players or modify system playback.
 
+### `test/timer-policy.test.js`
+
+Tests the pure away/sleep reset policy in `timer-policy.js`, independently
+from Electron, `powerMonitor`, and wall-clock time.
+
+Coverage:
+
+- Idle time and sleep time combine into one away measure and reset the work
+  interval when the total reaches the break duration.
+- A sleep shorter than the break duration alone never resets anything.
+- Pure idle away of a full break duration resets on return.
+- Away time one second short of the break duration does not reset.
+- Sleep during a break credits only the slept time to the break.
+- A break that fully elapses while asleep ends on wake.
+- An overnight sleep resets the work interval.
+
+These tests pin the rule agreed for away handling: only an absence of at
+least one full break duration starts a fresh work interval; shorter absences
+leave the timers exactly where they froze. The design is documented in
+`docs/superpowers/specs/2026-07-31-unified-away-tracking-design.md`.
+
 ### `test/settings-store.test.js`
 
 Tests settings defaults, migration, persistence, and recovery using temporary
@@ -68,6 +90,8 @@ Coverage:
 
 - New installs receive the media-control defaults.
 - Version 4 settings migrate to version 5 and persist the new settings.
+- Version 7 durations snap to whole minutes in version 8 (fixes 4:30-style
+  break timers) while whole-minute values and invalid values migrate safely.
 - Saving media settings preserves unrelated settings.
 - Corrupt JSON falls back to defaults.
 - environment variables take precedence when settings are saved.
@@ -80,7 +104,8 @@ Tests static contracts that are easy to break during packaging changes.
 
 Coverage:
 
-- Production modules are included in Electron Builder's file list.
+- Production modules are included in Electron Builder's file list
+  (including `timer-policy.js`).
 - The Windows PowerShell helper is unpacked from `app.asar`.
 - The macOS helper, licenses, notice, and corresponding source are packaged.
 - The settings UI exposes and binds both media-control settings.
@@ -95,12 +120,14 @@ Tests use the same modules as the running application:
   protection.
 - `media-controller.js` selects and executes platform adapters.
 - `settings-store.js` owns defaults, migration, loading, and saving.
+- `timer-policy.js` owns the away/sleep reset decisions as a pure function.
 - `main.js` connects those modules to Electron's break lifecycle.
 
 Keep operating-system commands behind `media-controller.js`. Keep asynchronous
-break-generation logic behind `break-media-manager.js`. This allows tests to
-inject deterministic fakes without launching Electron or controlling real
-media.
+break-generation logic behind `break-media-manager.js`. Keep reset-policy
+rules behind `timer-policy.js` so they stay testable without Electron. This
+allows tests to inject deterministic fakes without launching Electron or
+controlling real media.
 
 ## Additional Validation
 
@@ -120,6 +147,7 @@ node --check main.js
 node --check break-media-manager.js
 node --check media-controller.js
 node --check settings-store.js
+node --check timer-policy.js
 bash -n scripts/build-nowplaying-cli.sh
 bash -n scripts/verify-macos-app.sh
 node --check scripts/run-with-retries.js

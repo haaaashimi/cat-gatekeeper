@@ -16,6 +16,7 @@ When your work interval is up, a cat slides in from the side of your screen and 
 - **Multi-monitor** — works across all your displays
 - **Custom videos** — use your own cat videos (WIP)
 - **Snooze** — add 5 minutes when you're in the zone
+- **Away detection** — auto-pauses when you step away; a long enough absence counts as your break
 - **Media control** — pauses supported video and audio during breaks, with optional automatic resume
 
 ## 🚀 Quick Start
@@ -107,6 +108,30 @@ For most users, we recommend downloading the latest release:
 5. Reminder text and controls appear at the bottom of the screen
 6. After the break, the overlay closes and the timer resets
 7. You can snooze (+5 min) or dismiss the break early
+
+### Away & sleep behavior
+
+The timer measures time away from a single anchor — your last real input — so
+idle time at the desk and system sleep (lid close) combine into one measure:
+
+- **Step away briefly** — the countdown pauses once you pass the away timer
+  threshold and resumes exactly where it froze when you come back.
+- **Away for a full break duration or more** (idle, asleep, or a mix) — you
+  already had your break, so a fresh work interval starts when you return.
+- **System sleeps during a break** — the slept time counts toward the break;
+  if the break fully elapses while asleep, it ends on wake and a new work
+  interval begins.
+
+Example with a 5-minute break: 2 minutes idle followed by a 4-minute lid
+close is 6 minutes away — the work timer starts fresh on return. A 3-minute
+lid close alone just resumes the countdown where it left off.
+
+The reset rules live in [`timer-policy.js`](timer-policy.js); the full design
+is documented in
+[`docs/superpowers/specs/2026-07-31-unified-away-tracking-design.md`](docs/superpowers/specs/2026-07-31-unified-away-tracking-design.md).
+Known edge cases and their accepted trade-offs (e.g. why a short away earns
+no break credit) are documented in
+[`docs/TIMER_EDGE_CASES.md`](docs/TIMER_EDGE_CASES.md).
 
 ## 🎨 Custom Cat Video 🚧
 
