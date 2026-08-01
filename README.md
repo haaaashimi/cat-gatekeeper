@@ -56,7 +56,16 @@ For most users, we recommend downloading the latest release:
 > 
 > **These are standard macOS security responses for unsigned apps, not a problem with the app.** The app is open-source and safe to use.
 > 
-> **Fix 1: Remove quarantine from the DMG (recommended)**
+> This only affects builds **downloaded from the internet** — macOS stamps downloaded files with a "quarantine" attribute, and Gatekeeper rejects unsigned apps that carry it. A DMG built on your own machine (e.g. with `npm run dist:mac`) has no such attribute and opens normally. So a release download reporting "damaged" does **not** mean the build is broken — the artifact is healthy, macOS is simply blocking the unsigned download.
+> 
+> **Fix 1: Right-click → Open (quickest, no Terminal needed)**
+> 
+> 1. Double-click the DMG to mount it, then drag **Cat Gatekeeper** to your Applications folder
+> 2. Right-click (or Control-click) **Cat Gatekeeper** in Applications
+> 3. Choose **Open** from the context menu
+> 4. Click **Open** in the confirmation dialog — the app launches, and from then on opens normally with a double-click
+> 
+> **Fix 2: Remove quarantine from the DMG (recommended)**
 > 
 > Open Terminal and run this command on the downloaded DMG **before** opening it:
 > 
@@ -66,7 +75,7 @@ For most users, we recommend downloading the latest release:
 > 
 > Then double-click the DMG to mount it and drag the app to Applications.
 > 
-> **Fix 2: Allow via System Settings (after install)**
+> **Fix 3: Allow via System Settings (after install)**
 > 
 > If you already installed the app and see the "cannot be verified" message:
 > 
@@ -78,10 +87,12 @@ For most users, we recommend downloading the latest release:
 > 6. Click **Open Anyway**
 > 7. A second dialog will appear — click **Open**
 > 
-> **Fix 3: Remove quarantine from installed app**
+> **Fix 4: Remove quarantine from the installed app**
+> 
+> If the app is already installed and still blocked, clear the quarantine attribute recursively:
 > 
 > ```bash
-> xattr -d com.apple.quarantine /Applications/Cat\ Gatekeeper.app
+> xattr -cr /Applications/Cat\ Gatekeeper.app
 > ```
 > 
 > **Disclaimer:** Cat Gatekeeper is provided as-is under the MIT License. The app is open-source — you can review the code to verify its behavior. By using this software, you acknowledge that you do so at your own discretion. The maintainers are not responsible for any issues arising from its use.
