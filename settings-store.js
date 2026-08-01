@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 const DEFAULT_SETTINGS = {
-  version: 7,
+  version: 8,
   workInterval: 30,
   breakDuration: 300,
   snoozeDuration: 300,
@@ -17,6 +17,11 @@ const DEFAULT_SETTINGS = {
   chromaKeyColor: '#00FF00',
   startOnStartup: false
 };
+
+function snapToWholeMinutes(seconds, fallback) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return fallback;
+  return Math.max(60, Math.round(seconds / 60) * 60);
+}
 
 function createSettingsStore(settingsPath, environment = process.env, logger = console) {
   function write(settings) {
@@ -57,6 +62,14 @@ function createSettingsStore(settingsPath, environment = process.env, logger = c
     if (version < 7) {
       logger.log('Adding start on startup default (v6 → v7)');
       currentSettings.startOnStartup = DEFAULT_SETTINGS.startOnStartup;
+    }
+
+    if (version < 8) {
+      logger.log('Snapping durations to whole minutes (v7 → v8)');
+      // Older builds allowed 30-second slider steps, but the UI only shows
+      // whole minutes (e.g. 270s displayed as "5 min" while counting from 4:30)
+      currentSettings.breakDuration = snapToWholeMinutes(currentSettings.breakDuration, DEFAULT_SETTINGS.breakDuration);
+      currentSettings.snoozeDuration = snapToWholeMinutes(currentSettings.snoozeDuration, DEFAULT_SETTINGS.snoozeDuration);
     }
 
     currentSettings.version = DEFAULT_SETTINGS.version;

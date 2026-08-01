@@ -10,6 +10,7 @@ test('production modules are included in packaged app files', () => {
   assert.ok(packageJson.build.files.includes('break-media-manager.js'));
   assert.ok(packageJson.build.files.includes('media-controller.js'));
   assert.ok(packageJson.build.files.includes('settings-store.js'));
+  assert.ok(packageJson.build.files.includes('timer-policy.js'));
   assert.ok(packageJson.build.files.includes('scripts/windows-media-control.ps1'));
 });
 

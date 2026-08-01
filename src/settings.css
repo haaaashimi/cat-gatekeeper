@@ -323,6 +323,65 @@ input[type="range"]::-moz-range-thumb {
   margin-bottom: 16px;
 }
 
+/* ---- Experimental (WIP) accordion ---- */
+.wip-accordion {
+  margin-top: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.wip-accordion summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.wip-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.wip-accordion summary:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.wip-accordion-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.wip-accordion-chevron {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+
+.wip-accordion[open] .wip-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+.wip-accordion-body {
+  padding: 0 16px 12px;
+}
+
+/* Dim the non-functional controls inside the accordion */
+.wip-accordion-body .setting-row {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.wip-accordion-body .setting-row:last-child {
+  border-bottom: none;
+}
+
 .color-picker-wrapper {
   display: flex;
   align-items: center;
