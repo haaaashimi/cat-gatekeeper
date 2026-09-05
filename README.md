@@ -18,6 +18,7 @@ When your work interval is up, a cat slides in from the side of your screen and 
 - **Snooze** — add 5 minutes when you're in the zone
 - **Away detection** — auto-pauses when you step away; a long enough absence counts as your break
 - **Media control** — pauses supported video and audio during breaks, with optional automatic resume
+- **Auto-updates** — checks for new versions in the background; restart to install when ready (packaged builds)
 
 ## 🚀 Quick Start
 
@@ -103,7 +104,7 @@ For most users, we recommend downloading the latest release:
 | Command | Description |
 |---------|-------------|
 | `npm start` | Launch the app (30 min interval) |
-| `npm run start:dev` | Launch with 1 min interval for testing |
+| `npm run start:dev` | Launch with short intervals (2 min work / 3 min break) for testing |
 | `npm run pack` | Package app into a directory (no installer) |
 | `npm run dist` | Build installers for all platforms |
 | `npm run dist:win` | Build Windows installer (.exe) |
@@ -184,6 +185,11 @@ ffmpeg -i your_greenscreen.mp4 -vf "colorkey=0x00FF00:0.3:0.1,format=yuv420p" \
 cat-gatekeeper/
 ├── main.js                  # Main process: windows, tray, timer, IPC
 ├── preload.js               # Secure context bridge
+├── break-media-manager.js   # Break media pause/resume state & race protection
+├── media-controller.js      # Platform media adapters (win/mac/linux)
+├── settings-store.js        # Settings defaults, migration, persistence
+├── timer-policy.js          # Pure away/sleep reset decision rules
+├── updater.js               # In-app auto-updater (electron-updater)
 ├── package.json
 ├── src/
 │   ├── overlay.html         # Break overlay with cat video & timer
@@ -198,11 +204,28 @@ cat-gatekeeper/
 │       ├── neko2.webm       # Sleeping cat video (loops after active ends)
 │       ├── cat.mp4          # Fallback/legacy video
 │       ├── cat.png          # Fallback cat image
-│       ├── icon1.png         # App and tray icon
+│       ├── icon1.png        # App and tray icon
 │       └── icon-small.png   # Small tray icon
-└── scripts/
-    ├── generate-assets.js   # Generates PNG icons and cat image
-    └── generate-video.js    # Creates placeholder cat video via ffmpeg
+├── test/                    # node:test suite (34 tests)
+│   ├── break-media-manager.test.js
+│   ├── media-controller.test.js
+│   ├── package-contract.test.js
+│   ├── settings-store.test.js
+│   └── timer-policy.test.js
+├── scripts/
+│   ├── generate-assets.js   # Generates PNG icons and cat image
+│   ├── generate-video.js    # Creates placeholder cat video via ffmpeg
+│   ├── windows-media-control.ps1  # Windows media pause/resume helper
+│   ├── build-nowplaying-cli.sh    # Builds the bundled macOS helper
+│   ├── verify-nowplaying-bundle.js
+│   ├── verify-macos-app.sh
+│   └── run-with-retries.js
+├── vendor/
+│   └── nowplaying-cli/      # macOS media-control helper + licenses + source
+└── docs/
+    ├── TIMER_EDGE_CASES.md
+    ├── TEST_SUITE.md
+    └── superpowers/specs/     # Design specs
 ```
 
 ## ⚙️ Default Settings
@@ -211,11 +234,15 @@ cat-gatekeeper/
 |---------|---------|-------|
 | Work interval | 30 min | 5-120 min |
 | Break duration | 5 min (300 sec) | 1-10 min (60-600 sec) |
-| Snooze duration | 5 min (300 sec) | configurable |
+| Snooze duration | 5 min (300 sec) | 1-10 min |
+| Max snooze attempts | 2 | 1-10 |
+| Pause when away | enabled | on/off |
+| Away after (idle threshold) | 5 min (300 sec) | 1-15 min |
 | Sound effect | disabled | on/off |
 | Multi-monitor | enabled | on/off |
 | Pause media during breaks | enabled | on/off |
 | Resume media after breaks | disabled | on/off |
+| Launch on startup | disabled | on/off |
 | Cat video | bundled neko1.webm (active) + neko2.webm (sleeping) | user-selectable |
 
 ### External Media Support
@@ -259,11 +286,16 @@ For quick testing with short intervals:
 npm run start:dev
 ```
 
-This sets the work interval to 1 minute and break duration to 15 seconds. You can also use environment variables directly:
+This sets the work interval to 2 minutes and break duration to 3 minutes. You can also use environment variables directly:
 
 ```bash
-WORK_INTERVAL=1 BREAK_DURATION=15 npm start
+WORK_INTERVAL=2 BREAK_DURATION=180 npm start
 ```
+
+> **Note:** `start:dev` and direct environment-variable overrides skip the
+> whole-minute snapping that the settings UI and migration enforce, so
+> non-minute values (e.g. a 10-second break) only work this way — they are
+> never applied to end-user saves.
 
 ## 🤝 Contributing
 

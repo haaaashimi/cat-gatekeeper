@@ -23,7 +23,7 @@ Run a test by name:
 node --test --test-name-pattern="stale pause result"
 ```
 
-The full suite currently contains 32 tests.
+The full suite currently contains 34 tests.
 
 ## Test Files
 
@@ -148,6 +148,7 @@ node --check break-media-manager.js
 node --check media-controller.js
 node --check settings-store.js
 node --check timer-policy.js
+node --check updater.js
 bash -n scripts/build-nowplaying-cli.sh
 bash -n scripts/verify-macos-app.sh
 node --check scripts/run-with-retries.js
