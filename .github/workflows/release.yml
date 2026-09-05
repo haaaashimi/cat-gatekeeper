@@ -35,24 +35,24 @@ jobs:
     name: Build (${{ matrix.os }})
     needs: test
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
       fail-fast: false
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
         # Note: For production, pin to specific SHA:
         # uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: 'package.json'
           cache: 'npm'
-      
+
       - name: Cache dependencies
         uses: actions/cache@v6
         with:
@@ -62,18 +62,18 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      
+
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
 
       - name: Set release version from tag
         shell: bash
         run: npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
-      
+
       - name: Dependency audit
         shell: bash
         run: npm audit --audit-level=high || echo "Dependency audit reported advisories; continuing release build."
-      
+
       - name: Build macOS
         if: matrix.os == 'macos-latest'
         env:
@@ -82,59 +82,102 @@ jobs:
           npm run build:mac-helper
           npm run verify:mac-helper
           npm run dist:mac:ci
-      
+
       - name: Build Windows
         if: matrix.os == 'windows-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:win:ci
 
+      - name: Build Linux
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:linux:ci
+
       - name: Verify packaged macOS app resources
         if: matrix.os == 'macos-latest'
         run: npm run verify:mac-app -- --resources-only
-      
-      - name: Upload macOS artifacts
+
+      - name: List build output (including updater metadata)
+        shell: bash
+        run: ls -lh dist/
+
+      - name: Upload macOS artifacts (incl. updater metadata)
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v7
         with:
           name: macos-build
-          path: dist/*.dmg
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/latest-mac.yml
+            dist/*.blockmap
           retention-days: 5
           if-no-files-found: error
-      
-      - name: Upload Windows artifacts
+
+      - name: Upload Windows artifacts (incl. updater metadata)
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v7
         with:
           name: windows-build
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
           retention-days: 5
           if-no-files-found: error
-  
+
+      - name: Upload Linux artifacts (incl. updater metadata)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-build
+          path: |
+            dist/*.AppImage
+            dist/latest-linux.yml
+            dist/*.blockmap
+          retention-days: 5
+          if-no-files-found: error
+
   publish:
     name: Publish Release
     needs: release
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Download macOS artifacts
         uses: actions/download-artifact@v8
         with:
           name: macos-build
           path: dist/macos
-      
+
       - name: Download Windows artifacts
         uses: actions/download-artifact@v8
         with:
           name: windows-build
           path: dist/windows
-      
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-build
+          path: dist/linux
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/macos/*.dmg
+            dist/macos/*.zip
+            dist/macos/latest-mac.yml
+            dist/macos/*.blockmap
             dist/windows/*.exe
+            dist/windows/latest.yml
+            dist/windows/*.blockmap
+            dist/linux/*.AppImage
+            dist/linux/latest-linux.yml
+            dist/linux/*.blockmap
           generate_release_notes: true
           draft: false
           prerelease: false

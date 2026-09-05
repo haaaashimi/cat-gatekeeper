@@ -26,6 +26,22 @@
       </div>
     </div>
 
+    <!-- App Updates -->
+    <div class="status-card" id="updateCard">
+      <div class="status-label">Updates</div>
+      <div class="status-value" id="updateStatus" style="font-size:14px;">v…</div>
+      <div class="status-actions">
+        <button class="btn btn-sm" id="checkUpdatesBtn">Check</button>
+        <button class="btn btn-sm btn-reset" id="restartUpdateBtn" style="display:none;">Restart</button>
+      </div>
+    </div>
+    <div id="updateProgressRow" style="display:none;margin:-12px 0 20px 0;">
+      <div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.1);overflow:hidden;">
+        <div id="updateProgressBar" style="height:100%;width:0%;background:#2ecc71;transition:width 0.2s;"></div>
+      </div>
+      <div class="label-desc" id="updateProgressLabel" style="margin-top:6px;"></div>
+    </div>
+
     <!-- Work Interval -->
     <div class="setting-row">
       <div class="setting-label">

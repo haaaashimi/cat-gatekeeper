@@ -21,6 +21,18 @@ contextBridge.exposeInMainWorld('catAPI', {
   // Resource paths
   getResourcePath: (resource) => ipcRenderer.invoke('get-resource-path', resource),
 
+  // App updates (electron-updater)
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getUpdaterState: () => ipcRenderer.invoke('get-updater-state'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  quitAndInstall: () => ipcRenderer.send('quit-and-install'),
+
+  onUpdaterEvent: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('updater-event', handler);
+    return () => ipcRenderer.removeListener('updater-event', handler);
+  },
+
   // Event listeners - returned cleanup function
   onTimerTick: (callback) => {
     const handler = (_event, data) => callback(data);

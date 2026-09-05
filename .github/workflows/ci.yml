@@ -74,7 +74,7 @@ jobs:
     
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
       fail-fast: false  # Don't cancel other OS builds if one fails
     
     steps:
@@ -108,6 +108,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:win:ci
+
+      - name: Build for Linux
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:linux:ci
 
       - name: Verify packaged macOS app
         if: matrix.os == 'macos-latest'

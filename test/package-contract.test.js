@@ -11,9 +11,54 @@ test('production modules are included in packaged app files', () => {
   assert.ok(packageJson.build.files.includes('media-controller.js'));
   assert.ok(packageJson.build.files.includes('settings-store.js'));
   assert.ok(packageJson.build.files.includes('timer-policy.js'));
+  assert.ok(packageJson.build.files.includes('updater.js'));
   assert.ok(packageJson.build.files.includes('scripts/windows-media-control.ps1'));
 });
 
+test('OTA update pipeline is configured for mac, windows and linux', () => {
+  // Runtime deps for in-app updates
+  assert.ok(packageJson.dependencies['electron-updater'], 'electron-updater is a runtime dependency');
+  assert.ok(packageJson.dependencies['electron-log'], 'electron-log is a runtime dependency');
+
+  // GitHub publish provider feeds electron-updater via app-update.yml
+  const publish = Array.isArray(packageJson.build.publish)
+    ? packageJson.build.publish[0]
+    : packageJson.build.publish;
+  assert.equal(publish.provider, 'github');
+  assert.equal(publish.owner, 'haaaashimi');
+  assert.equal(publish.repo, 'cat-gatekeeper');
+
+  // macOS zip target is required for Squirrel.Mac updates (dmg alone is not enough)
+  const macTargets = Array.isArray(packageJson.build.mac.target)
+    ? packageJson.build.mac.target
+    : [packageJson.build.mac.target];
+  assert.ok(macTargets.includes('dmg'));
+  assert.ok(macTargets.includes('zip'));
+
+  // Only AppImage supports electron-updater on Linux
+  const linuxTargets = Array.isArray(packageJson.build.linux.target)
+    ? packageJson.build.linux.target
+    : [packageJson.build.linux.target];
+  assert.ok(linuxTargets.includes('AppImage'));
+
+  // CI covers all three platforms
+  assert.match(packageJson.scripts['dist:linux:ci'], /run-with-retries\.js 3 npm run dist:linux/);
+});
+
+test('updater bridge is exposed to the settings UI', () => {
+  const preload = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
+  for (const api of ['getAppVersion', 'checkForUpdates', 'quitAndInstall', 'onUpdaterEvent']) {
+    assert.match(preload, new RegExp(api), `${api} missing from preload bridge`);
+  }
+  const html = fs.readFileSync(path.join(root, 'src', 'settings.html'), 'utf8');
+  for (const id of ['updateCard', 'updateStatus', 'checkUpdatesBtn', 'restartUpdateBtn', 'updateProgressBar']) {
+    assert.match(html, new RegExp(`id="${id}"`), `${id} missing from settings UI`);
+  }
+  const updater = fs.readFileSync(path.join(root, 'updater.js'), 'utf8');
+  assert.match(updater, /electron-updater/);
+  assert.match(updater, /checkForUpdatesAndNotify/);
+  assert.match(updater, /quitAndInstall/);
+});
 test('Windows helper is unpacked for PowerShell execution', () => {
   assert.ok(packageJson.build.asarUnpack.includes('scripts/windows-media-control.ps1'));
 });
