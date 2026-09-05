@@ -51,9 +51,12 @@ test('updater bridge is exposed to the settings UI', () => {
     assert.match(preload, new RegExp(api), `${api} missing from preload bridge`);
   }
   const html = fs.readFileSync(path.join(root, 'src', 'settings.html'), 'utf8');
-  for (const id of ['updateCard', 'updateStatus', 'checkUpdatesBtn', 'restartUpdateBtn', 'updateProgressBar']) {
-    assert.match(html, new RegExp(`id="${id}"`), `${id} missing from settings UI`);
-  }
+  assert.match(html, /id="updateIconBtn"/, 'updateIconBtn missing from settings header');
+  assert.match(html, /id="updateStatusLine"/, 'updateStatusLine missing from settings header');
+  assert.doesNotMatch(html, /id="updateCard"/, 'separate update card should not exist');
+  const js = fs.readFileSync(path.join(root, 'src', 'settings.js'), 'utf8');
+  assert.match(js, /updateIconBtn/);
+  assert.match(js, /quitAndInstall/);
   const updater = fs.readFileSync(path.join(root, 'updater.js'), 'utf8');
   assert.match(updater, /electron-updater/);
   assert.match(updater, /checkForUpdatesAndNotify/);

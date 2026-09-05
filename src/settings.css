@@ -42,6 +42,7 @@ body {
 
 /* ---- Header ---- */
 .header {
+  position: relative;
   text-align: center;
   margin-bottom: 28px;
   padding-bottom: 20px;
@@ -109,6 +110,60 @@ body {
   background: rgba(230, 126, 34, 0.12);
   color: #f39c12;
   border-color: rgba(230, 126, 34, 0.6);
+}
+
+/* ---- App update icon (header, shown only when an update is active) ---- */
+.update-icon-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  border-radius: 50%;
+  color: #2ecc71;
+  cursor: pointer;
+}
+
+.update-icon-btn:hover {
+  background: rgba(46, 204, 113, 0.25);
+}
+
+.update-icon-btn[hidden] {
+  display: none;
+}
+
+/* Persistent one-line update status (visible only while an update is active) */
+.update-status-line {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #f39c12;
+}
+
+.update-status-line.ready {
+  color: #2ecc71;
+}
+
+.update-status-line[hidden] {
+  display: none;
+}
+
+.update-icon-btn.busy {
+  color: #f39c12;
+  border-color: rgba(243, 156, 18, 0.45);
+  background: rgba(243, 156, 18, 0.1);
+  cursor: default;
+  animation: update-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes update-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
 
 /* ---- Setting rows ---- */

@@ -34,12 +34,8 @@
   const maxSnoozeCountValue = document.getElementById('maxSnoozeCountValue');
   const maxSnoozeWarning = document.getElementById('maxSnoozeWarning');
   const startOnStartupInput = document.getElementById('startOnStartup');
-  const updateStatus = document.getElementById('updateStatus');
-  const checkUpdatesBtn = document.getElementById('checkUpdatesBtn');
-  const restartUpdateBtn = document.getElementById('restartUpdateBtn');
-  const updateProgressRow = document.getElementById('updateProgressRow');
-  const updateProgressBar = document.getElementById('updateProgressBar');
-  const updateProgressLabel = document.getElementById('updateProgressLabel');
+  const updateIconBtn = document.getElementById('updateIconBtn');
+  const updateStatusLine = document.getElementById('updateStatusLine');
 
   let currentSettings = {};
   let selectedVideoPath = null;
@@ -330,104 +326,72 @@
   }
 
   // -----------------------------------------------------------------------
-  // App updates (electron-updater via preload bridge)
+  // App updates: header icon only, visible while an update is active.
+  // Native tooltip (title) carries the status; checks run automatically
+  // and via the tray menu, so no check button here.
   // -----------------------------------------------------------------------
-  function setUpdateStatus(text) {
-    if (updateStatus) updateStatus.textContent = text;
+  let pendingUpdateVersion = null;
+  let updateReady = false;
+
+  function showUpdateIcon({ busy, tooltip, statusText, ready }) {
+    if (updateIconBtn) {
+      updateIconBtn.hidden = false;
+      updateIconBtn.classList.toggle('busy', !!busy);
+      updateIconBtn.title = tooltip;
+    }
+    if (updateStatusLine) {
+      updateStatusLine.hidden = false;
+      updateStatusLine.classList.toggle('ready', !!ready);
+      updateStatusLine.textContent = statusText || tooltip;
+    }
   }
 
-  function showRestartButton(version) {
-    if (restartUpdateBtn) {
-      restartUpdateBtn.style.display = '';
-      restartUpdateBtn.textContent = `Restart (${version})`;
-    }
-    if (checkUpdatesBtn) checkUpdatesBtn.disabled = true;
+  function hideUpdateIcon() {
+    if (updateIconBtn) updateIconBtn.hidden = true;
+    if (updateStatusLine) updateStatusLine.hidden = true;
+    pendingUpdateVersion = null;
+    updateReady = false;
   }
 
   function handleUpdaterEvent(evt) {
     if (!evt || !evt.type) return;
     switch (evt.type) {
-      case 'checking':
-        setUpdateStatus('Checking for updates…');
-        break;
       case 'available':
-        setUpdateStatus(`Downloading v${evt.version}…`);
-        if (updateProgressRow) updateProgressRow.style.display = '';
+        pendingUpdateVersion = evt.version;
+        updateReady = false;
+        showUpdateIcon({ busy: true, tooltip: `Downloading update to v${evt.version}…`, statusText: `Downloading update to v${evt.version}…` });
         break;
-      case 'progress': {
-        const pct = evt.percent || 0;
-        if (updateProgressBar) updateProgressBar.style.width = `${pct}%`;
-        if (updateProgressLabel) updateProgressLabel.textContent = `Downloading… ${pct}%`;
-        setUpdateStatus(`Downloading… ${pct}%`);
+      case 'progress':
+        showUpdateIcon({ busy: true, tooltip: `Downloading update to v${pendingUpdateVersion || evt.version || '?'}… ${evt.percent || 0}%`, statusText: `Downloading update… ${evt.percent || 0}%` });
         break;
-      }
       case 'downloaded':
-        if (updateProgressRow) updateProgressRow.style.display = 'none';
-        setUpdateStatus(`v${evt.version} ready — restart to install`);
-        showRestartButton(evt.version);
+        pendingUpdateVersion = evt.version;
+        updateReady = true;
+        showUpdateIcon({ busy: false, ready: true, tooltip: `Update to v${evt.version} ready — click to restart and install`, statusText: `Update to v${evt.version} ready — click the icon to restart` });
         break;
+      case 'checking':
       case 'not-available':
-        if (updateProgressRow) updateProgressRow.style.display = 'none';
-        setUpdateStatus('Up to date');
-        if (checkUpdatesBtn) checkUpdatesBtn.disabled = false;
-        break;
       case 'error':
-        if (updateProgressRow) updateProgressRow.style.display = 'none';
-        setUpdateStatus('Update check failed');
-        if (checkUpdatesBtn) checkUpdatesBtn.disabled = false;
+        hideUpdateIcon();
         break;
     }
   }
 
-  async function initUpdaterUI() {
-    if (!window.catAPI || !window.catAPI.getAppVersion) return;
-    try {
-      const version = await window.catAPI.getAppVersion();
-      setUpdateStatus(`v${version}`);
-    } catch (_) {
-      setUpdateStatus('Updates unavailable');
-      return;
+  function initUpdaterUI() {
+    if (!window.catAPI || !window.catAPI.onUpdaterEvent) return;
+    cleanup.push(window.catAPI.onUpdaterEvent(handleUpdaterEvent));
+    if (updateIconBtn) {
+      updateIconBtn.addEventListener('click', () => {
+        if (updateReady) window.catAPI.quitAndInstall();
+      });
     }
-    try {
-      const state = await window.catAPI.getUpdaterState();
-      if (state && state.downloadedVersion) {
-        setUpdateStatus(`v${state.downloadedVersion} ready — restart to install`);
-        showRestartButton(state.downloadedVersion);
-      } else if (state && !state.packaged) {
-        setUpdateStatus('Dev build — updates disabled');
-        if (checkUpdatesBtn) checkUpdatesBtn.disabled = true;
-      }
-    } catch (_) { /* keep version-only status */ }
-
-    if (window.catAPI.onUpdaterEvent) {
-      cleanup.push(window.catAPI.onUpdaterEvent(handleUpdaterEvent));
-    }
-    if (checkUpdatesBtn) {
-      checkUpdatesBtn.addEventListener('click', async () => {
-        checkUpdatesBtn.disabled = true;
-        setUpdateStatus('Checking for updates…');
-        try {
-          const result = await window.catAPI.checkForUpdates();
-          if (result && result.status === 'skipped-dev') {
-            setUpdateStatus('Dev build — updates disabled');
-          } else if (result && result.status === 'error') {
-            setUpdateStatus('Update check failed');
-            checkUpdatesBtn.disabled = false;
-          }
-          // 'checked' resolves via updater-event stream; re-enable on not-available/error
-          if (result && result.status === 'checked') {
-            setTimeout(() => { checkUpdatesBtn.disabled = false; }, 30000);
-          }
-        } catch (_) {
-          setUpdateStatus('Update check failed');
-          checkUpdatesBtn.disabled = false;
+    // If settings opened mid-download, reflect already-downloaded state.
+    if (window.catAPI.getUpdaterState) {
+      window.catAPI.getUpdaterState().then(state => {
+        if (state && state.downloadedVersion) {
+          handleUpdaterEvent({ type: 'downloaded', version: state.downloadedVersion });
         }
-      });
-    }
-    if (restartUpdateBtn) {
-      restartUpdateBtn.addEventListener('click', () => {
-        window.catAPI.quitAndInstall();
-      });
+      }).catch(() => { });
     }
   }
 
