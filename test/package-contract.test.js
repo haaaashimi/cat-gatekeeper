@@ -43,6 +43,12 @@ test('OTA update pipeline is configured for mac, windows and linux', () => {
 
   // CI covers all three platforms
   assert.match(packageJson.scripts['dist:linux:ci'], /run-with-retries\.js 3 npm run dist:linux/);
+
+  // Artifact names must be space-free: latest*.yml URLs have to match the
+  // uploaded asset names exactly, and spaces get mangled differently by the
+  // yml writer (hyphens) and the release uploader (dots) -> 404 on update.
+  assert.ok(packageJson.build.artifactName, 'artifactName is set');
+  assert.doesNotMatch(packageJson.build.artifactName, / /);
 });
 
 test('updater bridge is exposed to the settings UI', () => {

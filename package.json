@@ -74,6 +74,7 @@
       }
     ],
     "icon": "build/icon.png",
+    "artifactName": "${name}-${version}-${arch}.${ext}",
     "publish": [
       {
         "provider": "github",

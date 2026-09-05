@@ -71,7 +71,7 @@ For most users, we recommend downloading the latest release:
 > Open Terminal and run this command on the downloaded DMG **before** opening it:
 > 
 > ```bash
-> xattr -d com.apple.quarantine ~/Downloads/Cat.Gatekeeper-*.dmg
+> xattr -d com.apple.quarantine ~/Downloads/cat-gatekeeper-*.dmg
 > ```
 > 
 > Then double-click the DMG to mount it and drag the app to Applications.
