@@ -142,7 +142,6 @@ jobs:
           path: |
             dist/*.AppImage
             dist/latest-linux.yml
-            dist/*.zsync
           retention-days: 5
           if-no-files-found: error
 
@@ -183,7 +182,6 @@ jobs:
             dist/windows/*.blockmap
             dist/linux/*.AppImage
             dist/linux/latest-linux.yml
-            dist/linux/*.zsync
           generate_release_notes: true
           draft: false
           prerelease: false
