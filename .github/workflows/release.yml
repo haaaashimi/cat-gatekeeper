@@ -68,7 +68,13 @@ jobs:
 
       - name: Set release version from tag
         shell: bash
-        run: npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
+        run: |
+          # Tags must follow standard format: v1.0.0
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' is invalid. Use standard format, e.g. v1.0.0"
+            exit 1
+          fi
+          npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
 
       - name: Dependency audit
         shell: bash
