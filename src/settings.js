@@ -34,6 +34,12 @@
   const maxSnoozeCountValue = document.getElementById('maxSnoozeCountValue');
   const maxSnoozeWarning = document.getElementById('maxSnoozeWarning');
   const startOnStartupInput = document.getElementById('startOnStartup');
+  const updateStatus = document.getElementById('updateStatus');
+  const checkUpdatesBtn = document.getElementById('checkUpdatesBtn');
+  const restartUpdateBtn = document.getElementById('restartUpdateBtn');
+  const updateProgressRow = document.getElementById('updateProgressRow');
+  const updateProgressBar = document.getElementById('updateProgressBar');
+  const updateProgressLabel = document.getElementById('updateProgressLabel');
 
   let currentSettings = {};
   let selectedVideoPath = null;
@@ -324,12 +330,115 @@
   }
 
   // -----------------------------------------------------------------------
+  // App updates (electron-updater via preload bridge)
+  // -----------------------------------------------------------------------
+  function setUpdateStatus(text) {
+    if (updateStatus) updateStatus.textContent = text;
+  }
+
+  function showRestartButton(version) {
+    if (restartUpdateBtn) {
+      restartUpdateBtn.style.display = '';
+      restartUpdateBtn.textContent = `Restart (${version})`;
+    }
+    if (checkUpdatesBtn) checkUpdatesBtn.disabled = true;
+  }
+
+  function handleUpdaterEvent(evt) {
+    if (!evt || !evt.type) return;
+    switch (evt.type) {
+      case 'checking':
+        setUpdateStatus('Checking for updates…');
+        break;
+      case 'available':
+        setUpdateStatus(`Downloading v${evt.version}…`);
+        if (updateProgressRow) updateProgressRow.style.display = '';
+        break;
+      case 'progress': {
+        const pct = evt.percent || 0;
+        if (updateProgressBar) updateProgressBar.style.width = `${pct}%`;
+        if (updateProgressLabel) updateProgressLabel.textContent = `Downloading… ${pct}%`;
+        setUpdateStatus(`Downloading… ${pct}%`);
+        break;
+      }
+      case 'downloaded':
+        if (updateProgressRow) updateProgressRow.style.display = 'none';
+        setUpdateStatus(`v${evt.version} ready — restart to install`);
+        showRestartButton(evt.version);
+        break;
+      case 'not-available':
+        if (updateProgressRow) updateProgressRow.style.display = 'none';
+        setUpdateStatus('Up to date');
+        if (checkUpdatesBtn) checkUpdatesBtn.disabled = false;
+        break;
+      case 'error':
+        if (updateProgressRow) updateProgressRow.style.display = 'none';
+        setUpdateStatus('Update check failed');
+        if (checkUpdatesBtn) checkUpdatesBtn.disabled = false;
+        break;
+    }
+  }
+
+  async function initUpdaterUI() {
+    if (!window.catAPI || !window.catAPI.getAppVersion) return;
+    try {
+      const version = await window.catAPI.getAppVersion();
+      setUpdateStatus(`v${version}`);
+    } catch (_) {
+      setUpdateStatus('Updates unavailable');
+      return;
+    }
+    try {
+      const state = await window.catAPI.getUpdaterState();
+      if (state && state.downloadedVersion) {
+        setUpdateStatus(`v${state.downloadedVersion} ready — restart to install`);
+        showRestartButton(state.downloadedVersion);
+      } else if (state && !state.packaged) {
+        setUpdateStatus('Dev build — updates disabled');
+        if (checkUpdatesBtn) checkUpdatesBtn.disabled = true;
+      }
+    } catch (_) { /* keep version-only status */ }
+
+    if (window.catAPI.onUpdaterEvent) {
+      cleanup.push(window.catAPI.onUpdaterEvent(handleUpdaterEvent));
+    }
+    if (checkUpdatesBtn) {
+      checkUpdatesBtn.addEventListener('click', async () => {
+        checkUpdatesBtn.disabled = true;
+        setUpdateStatus('Checking for updates…');
+        try {
+          const result = await window.catAPI.checkForUpdates();
+          if (result && result.status === 'skipped-dev') {
+            setUpdateStatus('Dev build — updates disabled');
+          } else if (result && result.status === 'error') {
+            setUpdateStatus('Update check failed');
+            checkUpdatesBtn.disabled = false;
+          }
+          // 'checked' resolves via updater-event stream; re-enable on not-available/error
+          if (result && result.status === 'checked') {
+            setTimeout(() => { checkUpdatesBtn.disabled = false; }, 30000);
+          }
+        } catch (_) {
+          setUpdateStatus('Update check failed');
+          checkUpdatesBtn.disabled = false;
+        }
+      });
+    }
+    if (restartUpdateBtn) {
+      restartUpdateBtn.addEventListener('click', () => {
+        window.catAPI.quitAndInstall();
+      });
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Init
   // -----------------------------------------------------------------------
   function init() {
     loadSettings().then(() => {
       setupListeners();
       setupEvents();
+      initUpdaterUI();
       // Initialize button state
       checkForChanges();
     });

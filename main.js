@@ -15,6 +15,7 @@ const { createBreakMediaManager } = require('./break-media-manager');
 const { createMediaController } = require('./media-controller');
 const { createSettingsStore } = require('./settings-store');
 const { evaluateReturn } = require('./timer-policy');
+const { initUpdater, isUpdateDownloaded, getDownloadedVersion } = require('./updater');
 
 // ---------------------------------------------------------------------------
 // Settings persistence (manual JSON store to avoid ESM import issues with electron-store in CJS)
@@ -466,6 +467,33 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     {
+      label: isUpdateDownloaded()
+        ? `Restart to install v${getDownloadedVersion()}`
+        : 'Check for Updates…',
+      click: async () => {
+        if (isUpdateDownloaded()) {
+          try {
+            const { autoUpdater } = require('electron-updater');
+            autoUpdater.quitAndInstall(false, true);
+          } catch (_) { /* logged in updater module */ }
+          return;
+        }
+        if (!app.isPackaged) {
+          dialog.showMessageBox({ type: 'info', message: 'Updates are only checked in packaged builds.' });
+          return;
+        }
+        try {
+          const { autoUpdater } = require('electron-updater');
+          await autoUpdater.checkForUpdates();
+        } catch (_) { /* error event forwards to renderer */ }
+      }
+    },
+    {
+      label: `Version ${app.getVersion()}`,
+      enabled: false
+    },
+    { type: 'separator' },
+    {
       label: 'Quit',
       click: () => {
         stopTimer();
@@ -705,6 +733,7 @@ app.whenReady().then(() => {
 
   startTimer();
   createTray();
+  initUpdater({ isBreakActive: () => isBreakActive });
 
   // Show settings on first launch
   createSettingsWindow();

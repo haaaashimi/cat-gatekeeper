@@ -39,7 +39,8 @@
     "dist:win": "electron-builder --win --publish never",
     "dist:mac:ci": "node scripts/run-with-retries.js 3 npm run dist:mac",
     "dist:win:ci": "node scripts/run-with-retries.js 3 npm run dist:win",
-    "dist:linux": "electron-builder --linux --publish never"
+    "dist:linux": "electron-builder --linux --publish never",
+    "dist:linux:ci": "node scripts/run-with-retries.js 3 npm run dist:linux"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -53,6 +54,7 @@
     },
     "files": [
       "main.js",
+      "updater.js",
       "break-media-manager.js",
       "media-controller.js",
       "preload.js",
@@ -72,12 +74,22 @@
       }
     ],
     "icon": "build/icon.png",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "haaaashimi",
+        "repo": "cat-gatekeeper"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "build/icon.png"
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.png",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
@@ -112,11 +124,20 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "runAfterFinish": true
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png",
+      "category": "Utility"
     }
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
     "electron": "^43.4.0",
     "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9"
   }
 }
