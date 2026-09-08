@@ -1,11 +1,19 @@
 /* ---------------------------------------------------------------------------
    Cat Gatekeeper — In-app auto-updater (electron-updater, GitHub provider)
-   - Auto-download in background, prompt restart once downloaded.
+   - Auto-download in background; header icon + tray reflect state.
+   - No native notifications or modal dialogs: silent checkForUpdates() only
+     (never the Notify variant), installs are always silent.
    - No-ops in dev (app.isPackaged === false, no app-update.yml present).
    - Feed comes from electron-builder generated app-update.yml; do NOT call
      setFeedURL manually.
    --------------------------------------------------------------------------- */
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
+
+// Silent install everywhere: no prompts, relaunch the updated app.
+function quitAndInstallSilent() {
+  const { autoUpdater } = require('electron-updater');
+  autoUpdater.quitAndInstall(true, true);
+}
 
 let initialized = false;
 let updateDownloadedInfo = null;
@@ -24,42 +32,7 @@ function broadcast(channel, payload) {
   }
 }
 
-function getFocusedOrFirstWindow() {
-  const focused = BrowserWindow.getFocusedWindow();
-  if (focused && !focused.isDestroyed()) return focused;
-  const all = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed());
-  return all[0] || null;
-}
-
-function promptRestartOnDownloaded(info, isBreakActive) {
-  // During an active break the fullscreen overlay sits at screen-saver level;
-  // a modal would be hidden behind it. In that case just notify the renderer
-  // (Settings shows a "Restart to update" button) and skip the dialog.
-  if (typeof isBreakActive === 'function' && isBreakActive()) return;
-  const parent = getFocusedOrFirstWindow();
-  dialog
-    .showMessageBox(parent || undefined, {
-      type: 'info',
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Update ready',
-      message: `Cat Gatekeeper ${info.version} is downloaded. Restart to install it?`
-    })
-    .then(({ response }) => {
-      if (response === 0) {
-        try {
-          const { autoUpdater } = require('electron-updater');
-          autoUpdater.quitAndInstall(false, true);
-        } catch (err) {
-          log.error('quitAndInstall failed:', err);
-        }
-      }
-    })
-    .catch(err => log.error('update prompt failed:', err));
-}
-
-function initUpdater({ isBreakActive, startupDelayMs = 5000 } = {}) {
+function initUpdater({ startupDelayMs = 5000, checkIntervalMs = 4 * 60 * 60 * 1000, retryDelayMs = 10 * 60 * 1000 } = {}) {
   if (initialized) return { alreadyInitialized: true };
   initialized = true;
 
@@ -113,13 +86,29 @@ function initUpdater({ isBreakActive, startupDelayMs = 5000 } = {}) {
     updateDownloadedInfo = { version: info.version };
     log.info(`Update downloaded: ${info.version}`);
     broadcast('updater-event', { type: 'downloaded', version: info.version });
-    promptRestartOnDownloaded(info, isBreakActive);
   });
+
+  let retryTimer = null;
+  const doCheck = () => {
+    if (!app.isPackaged) return;
+    autoUpdater.checkForUpdates().catch(err => {
+      log.error('Update check failed:', err);
+    });
+  };
 
   autoUpdater.on('error', err => {
     lastError = String((err && err.stack) || err);
     log.error('Updater error:', err);
     broadcast('updater-event', { type: 'error', message: String((err && err.message) || err) });
+    // A failed check (e.g. no network on cold boot) must not stay failed
+    // until the next relaunch: retry once after a delay; the interval below
+    // covers everything after that.
+    if (app.isPackaged && retryTimer === null) {
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        doCheck();
+      }, retryDelayMs);
+    }
   });
 
   // Renderer IPC (registered once; setupIPC in main.js owns the rest)
@@ -144,19 +133,20 @@ function initUpdater({ isBreakActive, startupDelayMs = 5000 } = {}) {
 
   ipcMain.on('quit-and-install', () => {
     try {
-      autoUpdater.quitAndInstall(false, true);
+      quitAndInstallSilent();
     } catch (err) {
       log.error('quitAndInstall failed:', err);
     }
   });
 
-  // Automatic startup check (packaged builds only)
+  // Automatic checks (packaged builds only): once shortly after startup,
+  // then on an interval so a failed first check recovers by itself.
+  // Deliberately the silent checkForUpdates() here — the OS-level
+  // "update available" notification is suppressed in favour
+  // of our own header icon + tray state.
   if (app.isPackaged) {
-    setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify().catch(err => {
-        log.error('Startup update check failed:', err);
-      });
-    }, startupDelayMs);
+    setTimeout(doCheck, startupDelayMs);
+    setInterval(doCheck, checkIntervalMs);
   } else {
     log.info('Updater idle in dev (app not packaged).');
   }
@@ -172,4 +162,4 @@ function getDownloadedVersion() {
   return updateDownloadedInfo ? updateDownloadedInfo.version : null;
 }
 
-module.exports = { initUpdater, isUpdateDownloaded, getDownloadedVersion };
+module.exports = { initUpdater, isUpdateDownloaded, getDownloadedVersion, quitAndInstallSilent };

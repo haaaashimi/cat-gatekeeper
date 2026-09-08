@@ -15,7 +15,7 @@ const { createBreakMediaManager } = require('./break-media-manager');
 const { createMediaController } = require('./media-controller');
 const { createSettingsStore } = require('./settings-store');
 const { evaluateReturn } = require('./timer-policy');
-const { initUpdater, isUpdateDownloaded, getDownloadedVersion } = require('./updater');
+const { initUpdater, isUpdateDownloaded, getDownloadedVersion, quitAndInstallSilent } = require('./updater');
 
 // ---------------------------------------------------------------------------
 // Settings persistence (manual JSON store to avoid ESM import issues with electron-store in CJS)
@@ -473,8 +473,7 @@ function updateTrayMenu() {
       click: async () => {
         if (isUpdateDownloaded()) {
           try {
-            const { autoUpdater } = require('electron-updater');
-            autoUpdater.quitAndInstall(false, true);
+            quitAndInstallSilent();
           } catch (_) { /* logged in updater module */ }
           return;
         }
@@ -733,7 +732,7 @@ app.whenReady().then(() => {
 
   startTimer();
   createTray();
-  initUpdater({ isBreakActive: () => isBreakActive });
+  initUpdater();
 
   // Show settings on first launch
   createSettingsWindow();

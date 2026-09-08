@@ -65,8 +65,14 @@ test('updater bridge is exposed to the settings UI', () => {
   assert.match(js, /quitAndInstall/);
   const updater = fs.readFileSync(path.join(root, 'updater.js'), 'utf8');
   assert.match(updater, /electron-updater/);
-  assert.match(updater, /checkForUpdatesAndNotify/);
-  assert.match(updater, /quitAndInstall/);
+  assert.match(updater, /checkForUpdates\(\)/);
+  // No native prompts or modals: Notify API and dialog usage are banned
+  assert.doesNotMatch(updater, /checkForUpdatesAndNotify/);
+  assert.doesNotMatch(updater, /showMessageBox/);
+  // Installs are always silent (no prompts) and relaunch the app
+  assert.match(updater, /quitAndInstall\(true,\s*true\)/);
+  // Checks run on startup, on an interval, and retry after errors
+  assert.match(updater, /setInterval\(doCheck/);
 });
 test('Windows helper is unpacked for PowerShell execution', () => {
   assert.ok(packageJson.build.asarUnpack.includes('scripts/windows-media-control.ps1'));
